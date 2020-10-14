@@ -6,7 +6,9 @@ import sys
 
 def main():
     """Run administrative tasks."""
-    os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'haleyStats.settings')
+    """DJANGO_SETTINGS_MODULE set local setting. It must changed when you have
+        other purpost like publish products or test this project..etc. """
+    os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'haleyStats.settings.local')
     try:
         from django.core.management import execute_from_command_line
     except ImportError as exc:

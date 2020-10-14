@@ -11,12 +11,15 @@ https://docs.djangoproject.com/en/3.1/ref/settings/
 """
 
 import json
-from pathlib import Path
-from django.core.exception import ImproperlyConfigured
+
+from unipath import Path
+
+from django.core.exceptions import ImproperlyConfigured
 
 
 # Base on JSON secret module
-with open("secret.json") as f:
+# This parameter in open fuction must replace to relative path.
+with open('haleyStats/settings/secrets.json') as f:
     secrets = json.loads(f.read())
 
 
@@ -30,13 +33,12 @@ def get_secret(setting, secrets=secrets):
 
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
-BASE_DIR = Path(__file__).resolve().parent.parent
+BASE_DIR = Path(__file__).resolve().parent.parent.parent
+
+MEDIA_ROOT = BASE_DIR.child('media')
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/3.1/howto/static-files/
-
-MEDIA_ROOT = BASE_DIR.child("media")
-
 STATIC_ROOT = BASE_DIR.child("static")
 
 STATICFILES_DIRS = (
@@ -101,8 +103,12 @@ WSGI_APPLICATION = 'haleyStats.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'stats',
+        'USER': 'admin',
+        'PASSWORD': 'password',
+        'HOST': 'localhost',
+        'PORT': '',
     }
 }
 

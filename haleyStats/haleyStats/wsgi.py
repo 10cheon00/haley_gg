@@ -11,6 +11,8 @@ import os
 
 from django.core.wsgi import get_wsgi_application
 
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'haleyStats.settings')
+"""DJANGO_SETTINGS_MODULE set local setting. It must changed when you have
+        other purpost like publish products or test this project..etc. """
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'haleyStats.settings.local')
 
 application = get_wsgi_application()
