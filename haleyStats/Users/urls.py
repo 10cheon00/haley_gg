@@ -11,4 +11,10 @@ urlpatterns = [
     path('<str:user_name>/',
          views.UserDetailView.as_view(),
          name="detail"),
+    path('<str:user_name>/update/',
+         views.UserUpdateView.as_view(),
+         name="update"),
+    path('<str:user_name>/delete/',
+         views.UserDeleteView.as_view(),
+         name="delete")
 ]
