@@ -39,10 +39,10 @@ MEDIA_ROOT = BASE_DIR.child('media')
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/3.1/howto/static-files/
-STATIC_ROOT = BASE_DIR.child("static")
+# STATIC_ROOT = BASE_DIR.child("static")
 
 STATICFILES_DIRS = (
-    BASE_DIR.child("assets"),
+    BASE_DIR.child("static"),
 )
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/3.1/howto/deployment/checklist/
@@ -65,7 +65,6 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    
 ]
 
 MIDDLEWARE = [

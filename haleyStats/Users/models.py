@@ -8,7 +8,7 @@ class User(models.Model):
     class Meta:
         ordering = ['-joined_date']
 
-    user_name = models.CharField(max_length=30, default="")
+    user_name = models.CharField(max_length=30, default="", unique=True)
     joined_date = models.DateField(default=timezone.now)
     career = models.TextField(default="추가 바람.")
     most_race = models.CharField(max_length=10, default="")
@@ -16,5 +16,5 @@ class User(models.Model):
     def __str__(self):
         return self.user_name
 
-    def get_Absolute_Url(self):
-        return reverse("users:detail", kwargs={"name": self.user_name})
+    def get_absolute_url(self):
+        return reverse("users:detail", kwargs={"user_name": self.user_name})
