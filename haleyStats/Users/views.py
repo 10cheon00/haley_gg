@@ -10,14 +10,14 @@ from .models import User
 
 class SelectUserMixin(object):
     def get_object(self):
-        return get_object_or_404(User, user_name=self.kwargs['user_name'])
+        return get_object_or_404(User, name=self.kwargs['name'])
 
 
 class UserCreateView(CreateView):
     model = User
     template_name = 'Users/create.html'
     fields = [
-        'user_name',
+        'name',
         'joined_date',
         'most_race'
     ]
@@ -32,24 +32,12 @@ class UserCreateView(CreateView):
 class UserDetailView(SelectUserMixin, DetailView):
     template_name = 'Users/detail.html'
 
-#     def get_context_data(self, **kwargs):
-#         object = self.get_object()
-#         race_image_path = ""
-#         if object.most_race == 'Protoss':
-#             ""
-#         elif object.most_race == 'Terran':
-            
-#         context = {
-#             'object': object,
-#             'race_image_path': 
-#         }
-
 
 class UserUpdateView(SelectUserMixin, UpdateView):
     model = User
     template_name = 'Users/update.html'
     fields = [
-        'user_name',
+        'name',
         'joined_date',
         'most_race',
         'career'

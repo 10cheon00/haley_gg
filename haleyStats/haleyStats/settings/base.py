@@ -39,6 +39,10 @@ MEDIA_ROOT = BASE_DIR.child('media')
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/3.1/howto/static-files/
+
+# (staticfiles.E002)
+# The STATICFILES_DIRS setting should not contain the STATIC_ROOT setting.
+# Why ??? Why????
 # STATIC_ROOT = BASE_DIR.child("static")
 
 STATICFILES_DIRS = (

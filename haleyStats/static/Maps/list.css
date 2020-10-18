@@ -1,0 +1,17 @@
+.card:after{
+    top:0;
+    left:0;
+    width:100%;
+    height:100%;
+    opacity:0;
+    background: black;
+    z-index:1;
+}
+.card:hover:after {
+    transform: opacity 0.5;
+}
+
+.card {
+    transition: transform 0.1s linear 0s;
+    display: block;
+}
