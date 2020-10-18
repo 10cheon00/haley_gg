@@ -17,4 +17,4 @@ class User(models.Model):
         return self.user_name
 
     def get_absolute_url(self):
-        return reverse("users:detail", kwargs={"name": self.name})
+        return reverse("haley_gg:users_detail", kwargs={"name": self.name})

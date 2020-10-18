@@ -4,7 +4,7 @@ from django.views.generic import (
 )
 from django.urls import reverse
 
-from .models import Map
+from ..Models.maps import Map
 # Create your views here.
 
 
@@ -25,6 +25,7 @@ class MapCreateView(CreateView):
     template_name = 'Maps/create.html'
     fields = [
         'name',
+        'file',
     ]
 
     def form_valid(self, form):
@@ -50,4 +51,4 @@ class MapDeleteView(SelectMapMixin, DeleteView):
     template_name = "Maps/delete.html"
 
     def get_success_url(self):
-        return reverse('maps:list')
+        return reverse('haley_gg:maps_list')

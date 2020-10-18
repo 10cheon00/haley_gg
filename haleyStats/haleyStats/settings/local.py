@@ -5,8 +5,7 @@ DEBUG = True
 ALLOWED_HOSTS += ['*']
 
 INSTALLED_APPS += [
-    'haleyStats.Apps.Users.apps.UsersConfig',
-    'haleyStats.Apps.Maps.apps.MapsConfig',
+    'haleyStats.Apps.haley_gg.apps.HaleyGgConfig',
 ]
 
 LANGUAGE_CODE = 'ko-kr'

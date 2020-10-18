@@ -4,7 +4,7 @@ from django.views.generic import (
 )
 from django.urls import reverse
 
-from .models import User
+from ..Models.users import User
 # Create your views here.
 
 
