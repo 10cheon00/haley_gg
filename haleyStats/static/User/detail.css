@@ -1,10 +1,28 @@
-.jumbotron{
-    background-image: url("./images/protoss.jpg");
-    background-size:cover;
-    background-repeat:no-repeat;
+.jumbotron {
+    background-size: cover;
+    background-repeat: no-repeat;
+}
+.jumbotron.Zerg {
+    background-image: url('./images/zerg.jpg');
+}
+.jumbotron.Protoss {
+    background-image: url('./images/protoss.jpg');
+}
+.jumbotron.Terran {
+    background-image: url('./images/terran.jpg');
 }
 
-.icon{
-    width:50px;
-    height:50px;
+.icon {
+    width: 50px;
+    height: 50px;
+}
+
+.icon.Zerg {
+    content: url('./icons/zerg.jpg');
+}
+.icon.Protoss {
+    content: url('./icons/protoss.jpg');
+}
+.icon.Terran {
+    content: url('./icons/terran.jpg');
 }

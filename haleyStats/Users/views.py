@@ -32,6 +32,18 @@ class UserCreateView(CreateView):
 class UserDetailView(SelectUserMixin, DetailView):
     template_name = 'Users/detail.html'
 
+#     def get_context_data(self, **kwargs):
+#         object = self.get_object()
+#         race_image_path = ""
+#         if object.most_race == 'Protoss':
+#             ""
+#         elif object.most_race == 'Terran':
+            
+#         context = {
+#             'object': object,
+#             'race_image_path': 
+#         }
+
 
 class UserUpdateView(SelectUserMixin, UpdateView):
     model = User
