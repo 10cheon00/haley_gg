@@ -14,7 +14,7 @@ class User(models.Model):
     most_race = models.CharField(max_length=10, default="")
 
     def __str__(self):
-        return self.user_name
+        return self.name
 
     def get_absolute_url(self):
         return reverse("haley_gg:users_detail", kwargs={"name": self.name})

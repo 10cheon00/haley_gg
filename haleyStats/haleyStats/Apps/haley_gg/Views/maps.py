@@ -1,10 +1,11 @@
-from django.shortcuts import get_object_or_404
+from django.shortcuts import get_object_or_404, render, redirect
 from django.views.generic import (
-    ListView, CreateView, UpdateView, DeleteView, DetailView
+    View, ListView, UpdateView, DeleteView, DetailView
 )
 from django.urls import reverse
 
 from ..Models.maps import Map
+from ..forms import UploadFileForm
 # Create your views here.
 
 
@@ -20,19 +21,31 @@ class MapListView(ListView):
     context_object_name = 'Maps'
 
 
-class MapCreateView(CreateView):
-    model = Map
+class MapCreateView(View):
     template_name = 'Maps/create.html'
-    fields = [
-        'name',
-        'file',
-    ]
 
-    def form_valid(self, form):
-        return super(MapCreateView, self).form_valid(form)
+    def get(self, request, *args, **kwargs):
+        form = UploadFileForm()
+        context = {
+            'form': form
+        }
+        return render(request, self.template_name, context)
 
-    def form_invalid(self, form):
-        return super(MapCreateView, self).form_invalid(form)
+    def post(self, request, *args, **kwargs):
+        form = UploadFileForm(request.POST, request.FILES)
+        if form.is_valid():
+            form.save()
+            return redirect(reverse('haley_gg:maps_list'))
+        context = {
+            'form': form
+        }
+        return render(request, self.template_name, context)
+
+    # def form_valid(self, form):
+    #     return super(MapCreateView, self).form_valid(form)
+
+    # def form_invalid(self, form):
+    #     return super(MapCreateView, self).form_invalid(form)
 
 
 class MapDetailView(SelectMapMixin, DetailView):
