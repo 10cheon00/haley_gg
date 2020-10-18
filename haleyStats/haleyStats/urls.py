@@ -21,6 +21,6 @@ from . import views
 urlpatterns = [
     path('', views.main_page, name="main_page"),
     path('admin/', admin.site.urls),
-    path('users/', include("Users.urls", namespace="users")),
-    path('maps/', include("Maps.urls", namespace="maps")),
+    path('users/', include("haleyStats.Apps.Users.urls", namespace="users")),
+    path('maps/', include("haleyStats.Apps.Maps.urls", namespace="maps")),
 ]

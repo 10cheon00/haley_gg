@@ -6,7 +6,7 @@ from django.urls import reverse
 
 class User(models.Model):
     class Meta:
-        ordering = ['-joined_date']
+        ordering = ['-joined_date', 'name']
 
     name = models.CharField(max_length=30, default="", unique=True)
     joined_date = models.DateField(default=timezone.now)

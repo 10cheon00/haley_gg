@@ -2,5 +2,5 @@ from django.apps import AppConfig
 
 
 class UsersConfig(AppConfig):
-    name = 'Users'
-    verbose_name = 'Users'
+    name = 'haleyStats.Apps.Users'
+    verbose_name = 'User'

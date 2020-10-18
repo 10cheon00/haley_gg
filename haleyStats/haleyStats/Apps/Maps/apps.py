@@ -2,5 +2,5 @@ from django.apps import AppConfig
 
 
 class MapsConfig(AppConfig):
-    name = 'Maps'
+    name = 'haleyStats.Apps.Maps'
     verbose_name = 'Maps'

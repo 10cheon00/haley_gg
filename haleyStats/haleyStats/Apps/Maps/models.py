@@ -5,6 +5,7 @@ from django.urls import reverse
 
 class Map(models.Model):
     name = models.CharField(max_length=30, default="", unique=True)
+    match_count = models.IntegerField(default=0)
 
     def get_absolute_url(self):
         return reverse('maps:detail', kwargs={"name": self.name})
