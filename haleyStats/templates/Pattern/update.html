@@ -1,6 +1,6 @@
 {% extends 'base.html' %} {% block content %}
-<form method="POST" enctype="multipart/form-data" novalidate>
-    {% csrf_token %} 
+<form method="POST" enctype="multipart/form-data">
+    {% csrf_token %}
     {% for f in form %}
     <div class="form-group">
         {{f.name}} : {{f}}

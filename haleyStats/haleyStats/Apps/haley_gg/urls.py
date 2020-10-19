@@ -6,7 +6,10 @@ from .Views import users
 
 app_name = 'haley_gg'
 
-urlpatterns = [
+urlpatterns = []
+
+# maps.urls
+urlpatterns += [
     path('maps/',
          maps.MapListView.as_view(),
          name="maps_list"),
@@ -22,7 +25,10 @@ urlpatterns = [
     path('maps/<str:name>/update/',
          maps.MapUpdateView.as_view(),
          name="maps_update"),
+]
 
+# users.urls
+urlpatterns += [
     path('users/new/',
          users.UserCreateView.as_view(),
          name="users_create"),
@@ -37,3 +43,7 @@ urlpatterns = [
          name="users_update"),
 ]
 
+# stats.urls
+urlpatterns += [
+    
+]

@@ -1,24 +1,22 @@
 {% extends 'base.html' %} {% block content %} {% load static %}
 <!-- <link rel="stylesheet" href="{% static 'Maps/list.css' %}" /> -->
 <div class="container">
-    <div class="row py-4">
+    <div class="row py-4 justify-content-center">
         {% for item in Maps %}
         <div class="col-md-4 p-3">
             <div class="card">
-                <!-- Image path must be dynamic, not sequantial. This is a sample code for design with css.-->
-                {% load static %} {% static 'Maps/images/' as image_path %}
                 <!-- Add view overlay option to this image with bootstrap mask, but postponed.-->
-                <img
-                    class="card-img-top"
-                    alt=""
-                    src="{{ image_path }}{{forloop.counter}}.jpg"
-                />
+                <a href="{{item.name}}">
+                    <img class="card-img-top" src="{{ item.image.url }}" />
+                </a>
                 <div class="card-body text-center">
-                    <h4 class="card-title">
-                        {{item.name}}
-                    </h4>
+                    <a href="{{item.name}}">
+                        <h4 class="card-title">
+                            {{item.name}}
+                        </h4>
+                    </a>
                     <div class="card-text">
-                        경기 횟수 : {{item.match_count}}회
+                        {{item.match_count}}회 매치
                     </div>
                 </div>
             </div>

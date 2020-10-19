@@ -22,7 +22,7 @@ class MapListView(ListView):
 
 
 class MapCreateView(View):
-    template_name = 'Maps/create.html'
+    template_name = 'Pattern/create.html'
 
     def get(self, request, *args, **kwargs):
         form = UploadFileForm()
@@ -54,14 +54,16 @@ class MapDetailView(SelectMapMixin, DetailView):
 
 class MapUpdateView(SelectMapMixin, UpdateView):
     model = Map
-    template_name = 'Maps/update.html'
+    template_name = 'Pattern/update.html'
     fields = [
         'name',
+        'file',
+        'image'
     ]
 
 
 class MapDeleteView(SelectMapMixin, DeleteView):
-    template_name = "Maps/delete.html"
+    template_name = "Pattern/delete.html"
 
     def get_success_url(self):
         return reverse('haley_gg:maps_list')

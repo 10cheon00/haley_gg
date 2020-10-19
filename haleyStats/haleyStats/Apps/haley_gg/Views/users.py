@@ -15,7 +15,7 @@ class SelectUserMixin(object):
 
 class UserCreateView(CreateView):
     model = User
-    template_name = 'Users/create.html'
+    template_name = 'Pattern/create.html'
     fields = [
         'name',
         'joined_date',
@@ -35,7 +35,7 @@ class UserDetailView(SelectUserMixin, DetailView):
 
 class UserUpdateView(SelectUserMixin, UpdateView):
     model = User
-    template_name = 'Users/update.html'
+    template_name = 'Pattern/update.html'
     fields = [
         'name',
         'joined_date',
@@ -45,7 +45,7 @@ class UserUpdateView(SelectUserMixin, UpdateView):
 
 
 class UserDeleteView(SelectUserMixin, DeleteView):
-    template_name = "Users/delete.html"
+    template_name = "Pattern/delete.html"
 
     def get_success_url(self):
         return reverse('main_page')

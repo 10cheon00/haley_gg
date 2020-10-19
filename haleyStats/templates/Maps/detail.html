@@ -1,6 +1,16 @@
 {% extends 'base.html' %} {% block content %} {% load static %}
-
+<link rel="stylesheet" href="{% static 'Maps/detail.css' %}" />
 <div class="profile">
-    
+    <div class="row map-info bg-dark">
+        <div class="col-md-3 m-auto">
+            <img class="img m-3" src="{{object.image.url}}" />
+        </div>
+        <div class="col-md-5 align-self-center">
+            <div class="map-name text-white">
+                {{object.name}}
+            </div>
+            <small class="text-secondary">{{object.match_count}} 회 매치</small>
+        </div>
+    </div>
+    {% endblock content %}
 </div>
-{% endblock content %}
