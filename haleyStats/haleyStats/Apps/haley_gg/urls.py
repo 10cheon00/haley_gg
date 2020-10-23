@@ -2,6 +2,7 @@ from django.urls import path
 
 from .Views import maps
 from .Views import users
+from .Views import stats
 
 
 app_name = 'haley_gg'
@@ -10,40 +11,45 @@ urlpatterns = []
 
 # maps.urls
 urlpatterns += [
-    path('maps/',
+    path('map/',
          maps.MapListView.as_view(),
          name="maps_list"),
-    path('maps/new/',
+    path('map/new/',
          maps.MapCreateView.as_view(),
          name="maps_create"),
-    path('maps/<str:name>/',
+    path('map/<str:name>/',
          maps.MapDetailView.as_view(),
          name="maps_detail"),
-    path('maps/<str:name>/delete/',
+    path('map/<str:name>/delete/',
          maps.MapDeleteView.as_view(),
          name="maps_delete"),
-    path('maps/<str:name>/update/',
+    path('map/<str:name>/update/',
          maps.MapUpdateView.as_view(),
          name="maps_update"),
 ]
 
 # users.urls
 urlpatterns += [
-    path('users/new/',
+    path('user/new/',
          users.UserCreateView.as_view(),
          name="users_create"),
-    path('users/<str:name>/',
+    path('user/<str:name>/',
          users.UserDetailView.as_view(),
          name="users_detail"),
-    path('users/<str:name>/delete/',
+    path('user/<str:name>/delete/',
          users.UserDeleteView.as_view(),
          name="users_delete"),
-    path('users/<str:name>/update/',
+    path('user/<str:name>/update/',
          users.UserUpdateView.as_view(),
          name="users_update"),
 ]
 
 # stats.urls
 urlpatterns += [
-    
+    path('match/',
+         stats.MatchListView.as_view(),
+         name="match_list"),
+    path('match/new/melee',
+         stats.CreateMeleeView.as_view(),
+         name="match_create"),
 ]

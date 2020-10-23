@@ -10,4 +10,16 @@
         <small class="text-secondary">{{object.joined_date}}에 가입</small>
     </div>
 </div>
+<div class="match-list">
+    <ul class="list-group">
+        {% for match in match_list %}
+        <li class="list-group-item">
+            <span class="h5">{{match.league_name}}&nbsp;{{match.name}}&nbsp;{{match.set}}&nbsp;경기</span>
+            <small class="text-secondary">{{match.date}}</small>
+            <span class="h4">{{match.player_1}}</span>
+            <span class="h4">{{match.player_2}}</span>
+        </li>
+        {% endfor %}
+    </ul>
+</div>
 {% endblock content %}

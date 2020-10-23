@@ -5,7 +5,7 @@ from django.urls import reverse
 
 class Map(models.Model):
     name = models.CharField(max_length=30, default="", unique=True)
-    match_count = models.IntegerField(default=0)
+    match_counts = models.IntegerField(default=0)
     file = models.FileField(upload_to="Maps/files/", null=True)
     image = models.ImageField(upload_to="Maps/images/",
                               default="Maps/images/default.jpg",
