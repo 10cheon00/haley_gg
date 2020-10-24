@@ -1,9 +1,21 @@
 from django import forms
+from django.utils.translation import ugettext_lazy as _
+# from django.core.exceptions import ValidationError
 
 from .Models.maps import Map
 from .Models.stats import Match
 from .Models.users import User
 from .Models.stats import Player
+
+
+class UserModelForm(forms.ModelForm):
+    class Meta:
+        model = User
+        fields = [
+            'name',
+            'joined_date',
+            'most_race'
+        ]
 
 
 class UploadFileForm(forms.ModelForm):
@@ -35,6 +47,7 @@ class MatchForm(forms.ModelForm):
         self.fields['player_2'] = forms.ModelChoiceField(
             queryset=User.objects.all(), empty_label=None)
         self.fields['is_player_1_winner'] = forms.BooleanField()
+        self.fields['is_player_1_winner'].required = False
 
     def save(self, commit=True):
         data = super(MatchForm, self).save(commit=False)
@@ -54,5 +67,17 @@ class MatchForm(forms.ModelForm):
         else:
             p2.is_win = True
             p2.save()
+
+        return data
+
+    def clean(self):
+        # 1. Check reduplication on rounds and set.
+        data = self.cleaned_data
+        if Match.objects.filter(name=data['name'], set=data['set']).exists():
+            raise forms.ValidationError(_("Already exist match."))
+
+        # 2. Check same user on fields.
+        if data['player_1'] == data['player_2']:
+            raise forms.ValidationError(_("Players should not same."))
 
         return data

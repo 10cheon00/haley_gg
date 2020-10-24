@@ -1,13 +1,15 @@
 from django.shortcuts import get_object_or_404, render
 from django.views.generic import (
-    CreateView, UpdateView, DeleteView, View
+    CreateView,
+    UpdateView,
+    DeleteView,
+    View,
 )
 from django.urls import reverse
 
-from datetime import datetime
-
 from ..Models.users import User
 from ..Models.stats import Player
+from ..forms import UserModelForm
 # Create your views here.
 
 
@@ -19,17 +21,13 @@ class SelectUserMixin(object):
 class UserCreateView(CreateView):
     model = User
     template_name = 'Pattern/create.html'
-    fields = [
-        'name',
-        'joined_date',
-        'most_race'
-    ]
+    form_class = UserModelForm
 
-    def form_valid(self, form):
-        return super(UserCreateView, self).form_valid(form)
+    # def form_valid(self, form):
+    #     return super(UserCreateView, self).form_valid(form)
 
-    def form_invalid(self, form):
-        return super(UserCreateView, self).form_invalid(form)
+    # def form_invalid(self, form):
+    #     return super(UserCreateView, self).form_invalid(form)
 
 
 class UserDetailView(SelectUserMixin, View):

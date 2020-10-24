@@ -1,9 +1,9 @@
 {% extends 'base.html' %} {% block content %}
 <form method="POST" enctype="multipart/form-data" novalidate>
     {% csrf_token %} 
-    {% for f in form %}
+    {% for f in form.visible_fields %}
     <div class="form-group">
-        {{f.name}} : {{f}}
+        {{f.name}} : {{f}} {{f.errors}}
     </div>
     {% endfor %}
     <button type="submit" class="btn btn-primary">

@@ -14,7 +14,7 @@ urlpatterns += [
     path('map/',
          maps.MapListView.as_view(),
          name="maps_list"),
-    path('map/new/',
+    path('map_new/',
          maps.MapCreateView.as_view(),
          name="maps_create"),
     path('map/<str:name>/',
@@ -30,7 +30,7 @@ urlpatterns += [
 
 # users.urls
 urlpatterns += [
-    path('user/new/',
+    path('user_new/',
          users.UserCreateView.as_view(),
          name="users_create"),
     path('user/<str:name>/',
@@ -49,7 +49,7 @@ urlpatterns += [
     path('match/',
          stats.MatchListView.as_view(),
          name="match_list"),
-    path('match/new/melee',
+    path('match_new/melee',
          stats.CreateMeleeView.as_view(),
          name="match_create"),
 ]

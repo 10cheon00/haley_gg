@@ -2,13 +2,13 @@
     background-size: cover;
     background-repeat: no-repeat;
 }
-.jumbotron.Zerg {
+.jumbotron.Z {
     background-image: url('./images/zerg.jpg');
 }
-.jumbotron.Protoss {
+.jumbotron.P {
     background-image: url('./images/protoss.jpg');
 }
-.jumbotron.Terran {
+.jumbotron.T {
     background-image: url('./images/terran.jpg');
 }
 
@@ -17,12 +17,12 @@
     height: 50px;
 }
 
-.icon.Zerg {
+.icon.Z {
     content: url('./icons/zerg.jpg');
 }
-.icon.Protoss {
+.icon.P {
     content: url('./icons/protoss.jpg');
 }
-.icon.Terran {
+.icon.T {
     content: url('./icons/terran.jpg');
 }

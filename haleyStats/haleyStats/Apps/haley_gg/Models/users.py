@@ -3,15 +3,24 @@ from django.utils import timezone
 from django.urls import reverse
 # Create your models here.
 
+race_list = (
+    ('T', 'Terran'),
+    ('P', 'Protoss'),
+    ('Z', 'Zerg'),
+    ('R', 'Random')
+)
+
 
 class User(models.Model):
     class Meta:
         ordering = ['-joined_date', 'name']
 
-    name = models.CharField(max_length=30, default="", unique=True)
-    joined_date = models.DateField(default=timezone.now)
+    # Must change unique to UniqueConstraint.
+    # And add Case-Insensitive to UniqueConstraint.condition.
+    name = models.CharField(max_length=30, default="", unique=True, null=False)
+    joined_date = models.DateField(default=timezone.now, null=False)
     career = models.TextField(default="추가 바람.")
-    most_race = models.CharField(max_length=10, default="")
+    most_race = models.CharField(max_length=10, choices=race_list, null=False)
 
     def __str__(self):
         return self.name

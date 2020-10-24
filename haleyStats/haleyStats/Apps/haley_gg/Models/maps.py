@@ -4,6 +4,8 @@ from django.urls import reverse
 
 
 class Map(models.Model):
+    # Must change unique to UniqueConstraint.
+    # And add Case-Insensitive to UniqueConstraint.condition.
     name = models.CharField(max_length=30, default="", unique=True)
     match_counts = models.IntegerField(default=0)
     file = models.FileField(upload_to="Maps/files/", null=True)

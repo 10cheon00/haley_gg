@@ -25,14 +25,14 @@ class Match(models.Model):
         return ''.join(str)
 
     def get_name(self):
-        str = []
-        str.append(self.league_name)
-        str.append(' ')
-        str.append(self.name)
-        str.append(' ')
-        str.append(set)
-        str.append('경기')
-        return str
+        string = []
+        string.append(str(self.league_name))
+        string.append(' ')
+        string.append(str(self.name))
+        string.append(' ')
+        string.append(str(self.set))
+        string.append('경기')
+        return string
 
     def get_match_of(self, date):
         return self.objects.filter(date__exact=date)
@@ -50,11 +50,10 @@ class Player(models.Model):
     is_win = models.BooleanField(default=False)
 
     def __str__(self):
-        str = []
-        str.append(self.match.get_name)
-        str.append(' ')
-        str.append(self.user)
-        return ''.join(str)
+        string = []
+        string.append(' ')
+        string.append(str(self.user))
+        return ''.join(string)
 
 # Post
 #  - title, content, author, created_date
