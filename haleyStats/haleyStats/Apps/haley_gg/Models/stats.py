@@ -20,6 +20,10 @@ class Match(models.Model):
     date = models.DateField(default=timezone.now, null=False)
     map = models.ForeignKey(Map, on_delete=models.CASCADE, null=False)
 
+    def __str__(self):
+        str = self.get_name()
+        return ''.join(str)
+
     def get_name(self):
         str = []
         str.append(self.league_name)
@@ -30,12 +34,11 @@ class Match(models.Model):
         str.append('경기')
         return str
 
-    def __str__(self):
-        str = self.get_name()
-        return ''.join(str)
+    def get_match_of(self, date):
+        return self.objects.filter(date__exact=date)
 
-    def Date(self, date):
-        return self.filter(date__exact=date)
+    def get_match_of_user(self, user):
+        return self.objects.filter(user__exact=user)
 
 
 class Player(models.Model):
@@ -52,9 +55,6 @@ class Player(models.Model):
         str.append(' ')
         str.append(self.user)
         return ''.join(str)
-
-    def players_by_match_of(self, match):
-        return self.filter(match__exact=match)
 
 # Post
 #  - title, content, author, created_date

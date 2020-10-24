@@ -9,23 +9,30 @@
             <div class="d-flex justify-content-between align-items-center">
                 {{match.league_name}} {{match.name}} {{match.set}}경기
                 <div class="result">
-                    <span class="">
-                        <span class="h2">
-                            <a href="/user/">
-                                {% for player in match.player_set.all %}
-                                    {{player.user.name}}<br/>
-                                {% endfor %}
+                    <span class="h2 mr-2">
+                        {% for player in match.player_set.all %} 
+                            {% if forloop.counter0|divisibleby:'2' %}
+                            <a href="/user/{{player.user.name}}/">
+                                {{player.user.name}}
                             </a>
-                        </span>
+                            {% endif %}
+                        {% endfor %}
+                    </span>
+                    <span class="badge badge-primary">
                     </span>
                     <span class="text-secondary">
                         &nbsp;{{match.map}}&nbsp;
                     </span>
-                    <span class="">
-                        <span class="h2">
-                            <a href="/user/">
+                    <span class="badge badge-primary">
+                    </span>
+                    <span class="h2 ml-2">
+                        {% for player in match.player_set.all %} 
+                            {% if not forloop.counter0|divisibleby:'2' %}
+                            <a href="/user/{{player.user.name}}">
+                                {{player.user.name}}
                             </a>
-                        </span>
+                            {% endif %} 
+                        {% endfor %}
                     </span>
                 </div>
                 <div class="text-secondary">

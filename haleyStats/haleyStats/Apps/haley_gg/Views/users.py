@@ -4,8 +4,10 @@ from django.views.generic import (
 )
 from django.urls import reverse
 
+from datetime import datetime
+
 from ..Models.users import User
-from ..Models.stats import Match
+from ..Models.stats import Player
 # Create your views here.
 
 
@@ -35,7 +37,8 @@ class UserDetailView(SelectUserMixin, View):
 
     def get(self, request, *args, **kwargs):
         obj = self.get_object()
-        match_list = '' # Melee().get_queryset_with_id(obj.id)
+        match_list = Player.objects.filter(user__exact=obj)  # need ordering.
+        # match_list = Match.objects.filter(date__exact=datetime(2020, 10, 23))
         context = {
             'object': obj,
             'match_list': match_list
