@@ -9,7 +9,7 @@ from django.urls import reverse
 
 from ..Models.users import User
 from ..Models.stats import Player
-from ..forms import UserModelForm
+from ..forms import UserCreateForm, UserUpdateForm
 # Create your views here.
 
 
@@ -21,24 +21,18 @@ class SelectUserMixin(object):
 class UserCreateView(CreateView):
     model = User
     template_name = 'Pattern/create.html'
-    form_class = UserModelForm
-
-    # def form_valid(self, form):
-    #     return super(UserCreateView, self).form_valid(form)
-
-    # def form_invalid(self, form):
-    #     return super(UserCreateView, self).form_invalid(form)
+    form_class = UserCreateForm
 
 
 class UserDetailView(SelectUserMixin, View):
     template_name = 'Users/detail.html'
 
     def get(self, request, *args, **kwargs):
-        obj = self.get_object()
-        match_list = Player.objects.filter(user__exact=obj)  # need ordering.
+        user = self.get_object()
+        match_list = Player.objects.filter(user__exact=user)  # need ordering.
         # match_list = Match.objects.filter(date__exact=datetime(2020, 10, 23))
         context = {
-            'object': obj,
+            'user': user,
             'match_list': match_list
         }
         return render(request, self.template_name, context)
@@ -47,16 +41,12 @@ class UserDetailView(SelectUserMixin, View):
 class UserUpdateView(SelectUserMixin, UpdateView):
     model = User
     template_name = 'Pattern/update.html'
-    fields = [
-        'name',
-        'joined_date',
-        'most_race',
-        'career'
-    ]
+    form_class = UserUpdateForm
 
 
 class UserDeleteView(SelectUserMixin, DeleteView):
     template_name = "Pattern/delete.html"
 
     def get_success_url(self):
+        # Can't sure properly select redirect url. I will think this later.
         return reverse('main_page')

@@ -1,5 +1,6 @@
 from django.db import models
 from django.utils import timezone
+from django.shortcuts import reverse
 
 from ..Models.users import User
 from ..Models.maps import Map
@@ -8,10 +9,10 @@ from ..Models.maps import Map
 class Match(models.Model):
     class Meta:
         ordering = [
-            '-set',
-            '-name',
             '-league_name',
-            '-date'
+            '-name',
+            '-set',
+            '-date',
         ]
 
     league_name = models.CharField(max_length=20, default="", null=False)
@@ -39,6 +40,9 @@ class Match(models.Model):
 
     def get_match_of_user(self, user):
         return self.objects.filter(user__exact=user)
+
+    def get_absolute_url(self, **kwargs):
+        return reverse('haley_gg:match_list')
 
 
 class Player(models.Model):

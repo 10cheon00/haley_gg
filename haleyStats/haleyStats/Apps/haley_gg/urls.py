@@ -49,7 +49,10 @@ urlpatterns += [
     path('match/',
          stats.MatchListView.as_view(),
          name="match_list"),
-    path('match_new/melee',
-         stats.CreateMeleeView.as_view(),
+    path('match_new/',
+         stats.CreateMatchView.as_view(),
          name="match_create"),
+    path('match/<str:name>/update',
+         stats.UpdateMatchView.as_view(),
+         name="match_update"),
 ]

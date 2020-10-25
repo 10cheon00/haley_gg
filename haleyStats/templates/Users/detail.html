@@ -1,18 +1,18 @@
 {% extends 'base.html' %} {% block content %} {% load static %}
 <link rel="stylesheet" href="{% static 'User/detail.css' %}" />
 <div class="profile">
-    <div class="jumbotron rounded-0 text-light {{object.most_race}}">
+    <div class="jumbotron rounded-0 text-light {{user.most_race}}">
         <h1 class="jumbotron-heading">
-            <img class="icon rounded-circle {{object.most_race}}" />
-            {{object.name}}
-            <span class="h4 text-secondary">({{object.most_race}})</span>
+            <img class="icon rounded-circle {{user.most_race}}" />
+            {{user.name}}
+            <span class="h4 text-secondary">({{user.most_race}})</span>
         </h1>
         <h3></h3>
-        <small class="text-secondary">{{object.joined_date}}에 가입</small>
+        <small class="text-secondary">{{user.joined_date}}에 가입</small>
     </div>
     <div class="h2 m-3">커리어</div>
     <div class="jumbotron rounded-0 ">
-        {{object.career}}
+        {{user.career}}
     </div>
 </div>
 <div class="match-list">
@@ -26,8 +26,10 @@
                     >{{player.match.league_name}}&nbsp;{{player.match.name}}&nbsp;{{player.match.set}}&nbsp;경기
                 </span>
                 <small class="text-secondary ml-3 mr-3">{{player.match.date}}</small>
-                <span class="h4"
-                    >{% for player in player.match.player_set.all %} {{player.user.name}}&nbsp; {% endfor %}
+                <span class="h4">
+                    {% for player in player.match.player_set.all %} 
+                        {{player.user.name}}&nbsp;
+                    {% endfor %}
                 </span>
             </li>
         {% endfor %}

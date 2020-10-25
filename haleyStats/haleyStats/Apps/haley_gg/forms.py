@@ -1,6 +1,5 @@
 from django import forms
-from django.utils.translation import ugettext_lazy as _
-# from django.core.exceptions import ValidationError
+# from django.utils.translation import ugettext_lazy as _
 
 from .Models.maps import Map
 from .Models.stats import Match
@@ -8,7 +7,7 @@ from .Models.users import User
 from .Models.stats import Player
 
 
-class UserModelForm(forms.ModelForm):
+class UserCreateForm(forms.ModelForm):
     class Meta:
         model = User
         fields = [
@@ -18,13 +17,24 @@ class UserModelForm(forms.ModelForm):
         ]
 
 
-class UploadFileForm(forms.ModelForm):
+class UserUpdateForm(UserCreateForm):
+    class Meta(UserCreateForm.Meta):
+        # Show all field in User model.
+        fields = [
+            'name',
+            'joined_date',
+            'most_race',
+            'career'
+        ]
+
+
+class MapForm(forms.ModelForm):
     class Meta:
         model = Map
         fields = ('name', 'file', 'image')
 
     def __init__(self, *args, **kwargs):
-        super(UploadFileForm, self).__init__(*args, **kwargs)
+        super(MapForm, self).__init__(*args, **kwargs)
         self.fields['file'].required = True
         self.fields['image'].required = True
 
@@ -46,8 +56,7 @@ class MatchForm(forms.ModelForm):
             queryset=User.objects.all(), empty_label=None)
         self.fields['player_2'] = forms.ModelChoiceField(
             queryset=User.objects.all(), empty_label=None)
-        self.fields['is_player_1_winner'] = forms.BooleanField()
-        self.fields['is_player_1_winner'].required = False
+        self.fields['is_player_1_winner'] = forms.BooleanField(required=False)
 
     def save(self, commit=True):
         data = super(MatchForm, self).save(commit=False)
@@ -71,13 +80,17 @@ class MatchForm(forms.ModelForm):
         return data
 
     def clean(self):
+        super(MatchForm, self).clean()
         # 1. Check reduplication on rounds and set.
         data = self.cleaned_data
         if Match.objects.filter(name=data['name'], set=data['set']).exists():
-            raise forms.ValidationError(_("Already exist match."))
+            error_msg = u"Already exist match. Check match name or set."
+            self.add_error('set', error_msg)
+            # raise forms.ValidationError(_("Already exist match."))
 
         # 2. Check same user on fields.
         if data['player_1'] == data['player_2']:
-            raise forms.ValidationError(_("Players should not same."))
-
+            error_msg = u"Players should not same."
+            self.add_error('player_1', error_msg)
+            # raise forms.ValidationError(_("Players should not same."))
         return data

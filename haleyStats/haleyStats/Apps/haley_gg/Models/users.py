@@ -14,10 +14,14 @@ race_list = (
 class User(models.Model):
     class Meta:
         ordering = ['-joined_date', 'name']
-
+        constraints = [
+            models.UniqueConstraint(
+                fields=['name'],
+                name="unique_user_name")
+        ]
     # Must change unique to UniqueConstraint.
     # And add Case-Insensitive to UniqueConstraint.condition.
-    name = models.CharField(max_length=30, default="", unique=True, null=False)
+    name = models.CharField(max_length=30, default="", null=False)
     joined_date = models.DateField(default=timezone.now, null=False)
     career = models.TextField(default="추가 바람.")
     most_race = models.CharField(max_length=10, choices=race_list, null=False)
