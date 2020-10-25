@@ -1,4 +1,4 @@
-from django.shortcuts import reverse, render, redirect
+from django.shortcuts import reverse, render
 from django.views.generic import (
     View,
     UpdateView,
@@ -9,6 +9,7 @@ from ..Models.stats import Match
 from ..forms import MatchForm
 
 
+# Show all matches.
 class MatchListView(View):
     template_name = "Stats/list.html"
 
@@ -20,37 +21,17 @@ class MatchListView(View):
         return render(request, self.template_name, context)
 
 
+# Create a match model.
 class CreateMatchView(CreateView):
     form_class = MatchForm
     model = Match
     template_name = 'Pattern/create.html'
-#     def get(self, request, *args, **kwargs):
-#         form = MatchForm()
-#         context = {
-#             'form': form
-#         }
-#         return render(request, self.template_name, context)
-
-#     def post(self, request, *args, **kwargs):
-#         form = MatchForm(request.POST)
-#         if form.is_valid():
-#             form.save()
-#             return redirect(reverse('haley_gg:match_list'))
-#         context = {
-#             'form': form
-#         }
-#         return render(request, self.template_name, context)
-
-#     def form_valid(self, form):
-#         return super(CreateMeleeView, self).form_valid(form)
-
-#     def form_invalid(self, form):
-#         return super(CreateMeleeView, self).form_invalid(form)
 
     def get_absolute_url(self):
         return reverse('haley_gg:match_list')
 
 
+# Update a match model.
 class UpdateMatchView(UpdateView):
     model = Match
     form_class = MatchForm
