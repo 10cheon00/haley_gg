@@ -1,9 +1,8 @@
-from django.shortcuts import get_object_or_404
+from django.shortcuts import get_object_or_404, render
 from django.views.generic import (
-    ListView,
+    View,
     UpdateView,
     DeleteView,
-    DetailView,
     CreateView
 )
 from django.urls import reverse
@@ -19,11 +18,18 @@ class SelectMapMixin(object):
 
 
 # Show all map objects.
-class MapListView(ListView):
+class MapListView(View):
     model = Map
     template_name = 'Maps/list.html'
 
-    context_object_name = 'Maps'
+    def get(self, request, *args, **kwargs):
+        # Must be pagination.
+        maps = Map.objects.all()
+        context = {
+            'maps': maps,
+            # must be send match_count for each map.
+        }
+        return render(request, self.template_name, context)
 
 
 # Create a map object.
@@ -34,8 +40,17 @@ class MapCreateView(CreateView):
 
 
 # Show details of a map object.
-class MapDetailView(SelectMapMixin, DetailView):
+class MapDetailView(SelectMapMixin, View):
     template_name = 'Maps/detail.html'
+
+    def get(self, request, *args, **kwargs):
+        map = self.get_object()
+        match_count = map.match_set.all().count()
+        context = {
+            'map': map,
+            'match_count': match_count,
+        }
+        return render(request, self.template_name, context)
 
 
 # Update a map object.

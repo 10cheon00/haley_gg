@@ -5,6 +5,12 @@ from django.shortcuts import reverse
 from ..Models.users import User
 from ..Models.maps import Map
 
+race_list = (
+    ('T', 'Terran'),
+    ('P', 'Protoss'),
+    ('Z', 'Zerg'),
+)
+
 
 class Match(models.Model):
     # league name that indicated league such as Proleague, Starleague, etc...
@@ -55,6 +61,12 @@ class Player(models.Model):
     match = models.ForeignKey(Match, on_delete=models.CASCADE, null=False)
     # is win?
     is_win = models.BooleanField(default=False)
+    # race in this match
+    race = models.CharField(
+        default="",
+        max_length=10,
+        choices=race_list,
+        null=False)
 
     class Meta:
         ordering = ['match']

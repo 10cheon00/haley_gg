@@ -33,11 +33,13 @@ class UserDetailView(SelectUserMixin, View):
         # select user object with name keyword.
         user = self.get_object()
         # get objects which same as selected user.
-        # it must be pagination. i will manage it later.
+        # it must be pagination. I will manage it later.
         match_list = Player.objects.filter(user__exact=user)
+        win_rate = user.get_win_rate(user.player_set.all())
         context = {
             'user': user,
-            'match_list': match_list
+            'match_list': match_list,
+            'win_rate': win_rate,
         }
         return render(request, self.template_name, context)
 
