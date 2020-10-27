@@ -1,0 +1,59 @@
+{% extends 'base.html' %} {% block content %} {% load static %}
+    <form method="POST" enctype="multipart/form-data" novalidate>
+        {% csrf_token %}
+        <div class="form-group form-row">
+        {% for field in match_form.visible_fields %} 
+            <div class="col-md-2 text-right">
+                {{field.label_tag}} 
+            </div>
+            <div class="col-md-7">
+                {{field}} 
+            </div>
+            <div class="col-md-3">
+                {{field.errors}}
+            </div>
+        {% endfor %}
+        </div>
+        <hr>
+<!-- This inserts the management form into the page which includes hidden inputs that contain information about the number of forms being displayed and is used by Django when the form is submitted. -->
+        {{player_formset.management_form}}
+        {% for playerform in player_formset %}
+            <div class="form-row player-form" id="form-container">
+                <div class="table col-md-10">
+                    {{ playerform.as_table }}
+                </div>
+            </div>
+        {% endfor %}
+        <button id="add-form" type="button" class="btn btn-primary">
+            Add Players
+        </button>
+        <hr>
+        <button type="submit" class="btn btn-success">
+            Save
+        </button>
+    </form>
+<script>
+    function cloneMore(selector, type) {
+        // commenting please
+        var newElement = $(selector).clone(true);
+        var total = $('#id_' + type + '-TOTAL_FORMS').val();
+        newElement.find(':input').each(function() {
+            var name = $(this).attr('name').replace('-' + (total-1) + '-','-' + total + '-');
+            var id = 'id_' + name;
+            $(this).attr({'name': name, 'id': id}).val('').removeAttr('checked');
+        });
+        newElement.find('label').each(function() {
+            var newFor = $(this).attr('for').replace('-' + (total-1) + '-','-' + total + '-');
+            $(this).attr('for', newFor);
+        });
+        total++;
+        $('#id_' + type + '-TOTAL_FORMS').val(total);
+        $(selector).after(newElement);
+    }
+    
+    $('#add-form').click(function() {
+        cloneMore('div.table:last', 'service');
+        cloneMore('div.table:last', 'service');
+    });
+</script>
+{% endblock %}

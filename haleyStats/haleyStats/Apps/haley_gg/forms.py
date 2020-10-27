@@ -1,4 +1,6 @@
 from django import forms
+from django.forms import modelformset_factory
+
 
 from .Models.maps import Map
 from .Models.stats import Match
@@ -63,6 +65,7 @@ class MapForm(forms.ModelForm):
     # Check that the map name is already exist.
     def clean_name(self):
         name = self.cleaned_data['name']
+        
         if Map.objects.filter(name__iexact=name):
             error_msg = u"Already exist map name."
             self.add_error('name', error_msg)
@@ -112,25 +115,26 @@ class MatchForm(forms.ModelForm):
         # Add fields 'player_1, 2' and 'is_player_1_winner'.
         # For now, I can't make searching user query.
         # So replaced by a ModelChoiceField.
-        self.fields['player_1'] = forms.ModelChoiceField(
-            queryset=User.objects.all(), empty_label=None)
-        self.fields['player_2'] = forms.ModelChoiceField(
-            queryset=User.objects.all(), empty_label=None)
-        self.fields['is_player_1_winner'] = forms.BooleanField(required=False)
+        # self.fields['player_1'] = forms.ModelChoiceField(
+        #     queryset=User.objects.all(), empty_label=None)
+        # self.fields['player_2'] = forms.ModelChoiceField(
+        #     queryset=User.objects.all(), empty_label=None)
+        # self.fields['is_player_1_winner'] = forms.BooleanField(required=False)
 
     def clean(self):
-        super(MatchForm, self).clean()
-        data = self.cleaned_data
+        cleaned_data = super(MatchForm, self).clean()
+
         # 1. Check reduplication on rounds and set.
-        if Match.objects.filter(name=data['name'], set=data['set']).exists():
+        if Match.objects.filter(name=cleaned_data['name'],
+                                set=cleaned_data['set']).exists():
             error_msg = u"Already exist match. Check match name or set."
             self.add_error('set', error_msg)
 
-        # 2. Check same user on fields.
-        if data['player_1'] == data['player_2']:
-            error_msg = u"Players should not same."
-            self.add_error('player_1', error_msg)
-        return data
+        # # 2. Check same user on fields.
+        # if cleaned_data['player_1'] == cleaned_data['player_2']:
+        #     error_msg = u"Players should not same."
+        #     self.add_error('player_1', error_msg)
+        return cleaned_data
 
     def save(self, commit=True):
         data = super(MatchForm, self).save(commit=False)
@@ -141,20 +145,44 @@ class MatchForm(forms.ModelForm):
             # Secondly, Add match count plus 1 on map.
             self.cleaned_data['map'].add_count(1)
 
-            # Thirdly, Create Player model related Match model.
-            p1 = Player.objects.create(
-                user=self.cleaned_data['player_1'],
-                match=data)
-            p2 = Player.objects.create(
-                user=self.cleaned_data['player_2'],
-                match=data)
+            # # Thirdly, Create Player model related Match model.
+            # p1 = Player.objects.create(
+            #     user=self.cleaned_data['player_1'],
+            #     match=data)
+            # p2 = Player.objects.create(
+            #     user=self.cleaned_data['player_2'],
+            #     match=data)
 
-            # Fourthly, Save who is winner in data.
-            if self.cleaned_data['is_player_1_winner']:
-                p1.is_win = True
-                p1.save()
-            else:
-                p2.is_win = True
-                p2.save()
+            # # Fourthly, Save who is winner in data.
+            # if self.cleaned_data['is_player_1_winner']:
+            #     p1.is_win = True
+            #     p1.save()
+            # else:
+            #     p2.is_win = True
+            #     p2.save()
 
         return data
+
+
+class PlayerForm(forms.ModelForm):
+    class Meta:
+        model = Player
+        fields = [
+            'user',
+            'is_win'
+        ]
+
+    def clean(self):
+        cleaned_data = super(PlayerForm, self).clean()
+        # Check same user on fields.
+        if cleaned_data['player_1'] == cleaned_data['player_2']:
+            error_msg = u"Players should not same."
+            self.add_error('player_1', error_msg)
+        return cleaned_data
+
+
+PlayerFormsetFactory = modelformset_factory(
+    Player,
+    form=PlayerForm,
+    extra=8,
+    max_num=2,)
