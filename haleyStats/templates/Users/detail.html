@@ -10,29 +10,55 @@
         <h3></h3>
         <small class="text-secondary">{{user.joined_date}}에 가입</small>
     </div>
+    <hr>
     <div class="h2 m-3">커리어</div>
     <div class="jumbotron rounded-0 ">
         {{user.career}}
     </div>
 </div>
+<hr>
+<div class="statistics-summary">
+    <div class="h2 m-3">최근 전적 - 승률 : {{odds}}%</div>
+</div>
 <div class="match-list">
-    <div class="h2 m-3">최근 전적 - 승률 : {{win_rate}}%</div>
     <ul class="list-group">
-            {% for player in match_list %}
+            {% for match in match_list %}
             <li
-                class="list-group-item {% if player.is_win %}list-group-item-primary{% else %}list-group-item-danger{% endif %}"
+                class="list-group-item 
+                    {% for player in match.player_set.all %}
+                        {% if player.user.name == user.name %}
+                            {% if player.is_win %}
+                                list-group-item-primary
+                            {% else %}
+                                list-group-item-danger
+                            {% endif %}
+                        {% endif %}
+                    {% endfor %}"
             >
                 <span class="h5"
-                    >{{player.match.league_name}}&nbsp;{{player.match.name}}&nbsp;{{player.match.set}}&nbsp;경기
+                    >{{match.league_name}}&nbsp;{{match.name}}&nbsp;{{match.set}}&nbsp;경기
                 </span>
-                <small class="text-secondary ml-3 mr-3">{{player.match.date}}</small>
+                <small class="text-secondary ml-3 mr-3">{{match.date}}</small>
                 <span class="h4">
-                    {% for player in player.match.player_set.all %} 
-                        {{player.user.name}}&nbsp;
+                    {% for player in match.player_set.all %} 
+                        <a href="{{player.user.get_absolute_url}}">{{player.user.name}}</a>&nbsp;
                     {% endfor %}
                 </span>
             </li>
         {% endfor %}
     </ul>
+</div>
+<hr>
+<div class="statistics m-3">
+    <div class="h2">
+        종족별 승률
+    </div>
+    <div class="h4 row justify-content-center">
+        {% for key, value in odds_by_race.items %}
+            <span class="col-md-4">
+                vs&nbsp;{{key}}&nbsp;{{value}}%
+            </span>
+        {% endfor %}
+    </div>
 </div>
 {% endblock content %}

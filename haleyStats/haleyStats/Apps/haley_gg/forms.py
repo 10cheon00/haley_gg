@@ -1,5 +1,5 @@
 from django import forms
-from django.forms import modelformset_factory
+from django.forms import inlineformset_factory
 
 
 from .Models.maps import Map
@@ -23,6 +23,9 @@ class UserCreateForm(forms.ModelForm):
         name = self.cleaned_data['name']
         if User.objects.filter(name__iexact=name):
             error_msg = u"Already exist user name."
+            self.add_error('name', error_msg)
+        if name == 'new':
+            error_msg = u"This name cannot allowed."
             self.add_error('name', error_msg)
         return name
 
@@ -65,9 +68,11 @@ class MapForm(forms.ModelForm):
     # Check that the map name is already exist.
     def clean_name(self):
         name = self.cleaned_data['name']
-        
         if Map.objects.filter(name__iexact=name):
             error_msg = u"Already exist map name."
+            self.add_error('name', error_msg)
+        if name == 'new':
+            error_msg = u"This name cannot allowed."
             self.add_error('name', error_msg)
         return name
 
@@ -112,77 +117,45 @@ class MatchForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super(MatchForm, self).__init__(*args, **kwargs)
-        # Add fields 'player_1, 2' and 'is_player_1_winner'.
-        # For now, I can't make searching user query.
-        # So replaced by a ModelChoiceField.
-        # self.fields['player_1'] = forms.ModelChoiceField(
-        #     queryset=User.objects.all(), empty_label=None)
-        # self.fields['player_2'] = forms.ModelChoiceField(
-        #     queryset=User.objects.all(), empty_label=None)
-        # self.fields['is_player_1_winner'] = forms.BooleanField(required=False)
 
     def clean(self):
         cleaned_data = super(MatchForm, self).clean()
-
-        # 1. Check reduplication on rounds and set.
+        if self.errors:
+            return cleaned_data
+        # Check reduplication on rounds and set.
         if Match.objects.filter(name=cleaned_data['name'],
                                 set=cleaned_data['set']).exists():
             error_msg = u"Already exist match. Check match name or set."
             self.add_error('set', error_msg)
-
-        # # 2. Check same user on fields.
-        # if cleaned_data['player_1'] == cleaned_data['player_2']:
-        #     error_msg = u"Players should not same."
-        #     self.add_error('player_1', error_msg)
         return cleaned_data
 
-    def save(self, commit=True):
-        data = super(MatchForm, self).save(commit=False)
-        if commit:
-            # First, Create Match model.
-            data.save()
 
-            # Secondly, Add match count plus 1 on map.
-            self.cleaned_data['map'].add_count(1)
-
-            # # Thirdly, Create Player model related Match model.
-            # p1 = Player.objects.create(
-            #     user=self.cleaned_data['player_1'],
-            #     match=data)
-            # p2 = Player.objects.create(
-            #     user=self.cleaned_data['player_2'],
-            #     match=data)
-
-            # # Fourthly, Save who is winner in data.
-            # if self.cleaned_data['is_player_1_winner']:
-            #     p1.is_win = True
-            #     p1.save()
-            # else:
-            #     p2.is_win = True
-            #     p2.save()
-
-        return data
-
-
-class PlayerForm(forms.ModelForm):
-    class Meta:
-        model = Player
-        fields = [
-            'user',
-            'is_win'
-        ]
+# Model has a foreign key, it is better to use inlineformset.
+class PlayerFormSet(forms.BaseInlineFormSet):
 
     def clean(self):
-        cleaned_data = super(PlayerForm, self).clean()
-        # Check same user on fields.
-        if cleaned_data['player_1'] == cleaned_data['player_2']:
-            error_msg = u"Players should not same."
-            self.add_error('player_1', error_msg)
-        return cleaned_data
+        super(PlayerFormSet, self).clean()
+        users = []
+        # check name in player list.
+        for form in self.forms:
+            user = form.cleaned_data.get('user')
+            if user in users:
+                error_msg = u"Players should not same."
+                form.add_error('user', error_msg)
+            else:
+                users.append(user)
+        return
 
 
-PlayerFormsetFactory = modelformset_factory(
-    Player,
-    form=PlayerForm,
-    extra=8,
-    max_num=2,)
+player_formset_factory = inlineformset_factory(
+    parent_model=Match,
+    model=Player,
+    fields=[
+        'user',
+        'is_win',
+        'race'
+    ],
+    formset=PlayerFormSet,
+    extra=8,  # maximum of forms
+    max_num=2,  # maximum of generatable forms
+    can_delete=False)  # formset purpose is to delete item

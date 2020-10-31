@@ -23,6 +23,8 @@ class Match(models.Model):
     date = models.DateField(default=timezone.now, null=False)
     # map used in game
     map = models.ForeignKey(Map, on_delete=models.CASCADE, null=False)
+    # is team Match
+    match_type = models.CharField(max_length=10, default="melee")
 
     class Meta:
         ordering = [

@@ -1,11 +1,11 @@
 {% extends 'base.html' %}
 {% block content %}
-<div class="row">
-    <div class="col-md-8 bg-light">
-        Hi!
-    </div>
-    <div class="col-md-4 bg-dark">
-        Great!
-    </div>
+<div class="jumbotron">
+    <form method="GET">
+        <input type="text" name="search-user"/>
+        <button type="submit">
+            검색
+        </button>
+    </form>
 </div>
 {% endblock %}

@@ -1,52 +1,61 @@
 {% extends 'base.html' %} {% block content %} {% load static %}
-<div class="container">
-    <div class="text-center h2 mt-3 mb-3">
-        Current Matches
-    </div>
-    <ul class="list-group m-3">
-        {% for match in matches %}
-        <li class="list-group-item">
-            <div class="d-flex justify-content-between align-items-center">
-                <div class="match-data mr-2">
-                    {{match.league_name}} {{match.name}} {{match.set}}경기
-                </div>
-                <div class="match-result 
-                            row ml-2 mr-2 w-auto align-items-center">
-                    {% for player in match.player_set.all %}
-                        <div class="col-md h2 mr-2 order-0 text-right">
-                            {% if forloop.counter0|divisibleby:'2' %}
-                            <a href="/user/{{player.user.name}}/">{{player.user.name}}</a>
-                            {% endif %}
-                        </div>
-                        <div class="badge 
-                                    {% if player.is_win %}
-                                        badge-primary
-                                    {% else %}
-                                        badge-danger
-                                    {% endif %}">
-                            {% if player.is_win %}
-                                승
-                            {% else %}
-                                패
-                            {% endif %}
-                        </div>
-                        <div class="col-md h2 ml-2 order-4 text-left">
-                            {% if not forloop.counter0|divisibleby:'2' %}
-                            <a href="/user/{{player.user.name}}">{{player.user.name}}</a>
-                            {% endif %} 
-                        </div>
-                    {% endfor %}
-                    <span class="text-secondary order-2 ml-2 mr-2">
-                        <a href="/map/{{match.map}}">&nbsp;{{match.map}}&nbsp;</a>
-                    </span>
-                </div>
-                <div class="text-secondary ml-2">
-                    <small>{{match.date}}</small>
-                </div>
-            </div>
-        </li>
-        {% endfor %}
-    </ul>
+<div class="text-center h2 mt-3 mb-3">
+    Current Matches
 </div>
-
+<ul class="list-group m-3">
+    {% for match in matches %}
+    <li class="list-group-item">
+        <div class="d-flex justify-content-between align-items-center">
+            <div class="match-data mr-2">
+                {{match.league_name}} {{match.name}} {{match.set}}경기
+            </div>
+            <div class="match-result 
+                        row ml-2 mr-2 w-auto align-items-center">
+                {% for player in match.player_set.all %}
+                    <div class="col-md-auto h2 mr-2 order-0 text-right">
+                        {% if forloop.counter0|divisibleby:'2' %}
+                        <a href="{{player.user.get_absolute_url}}">
+                            {{player.user.name}}
+                            <span class="h4">({{player.race}})</span>
+                        </a>
+                        {% endif %}
+                    </div>
+                    <div class="badge 
+                                {% if forloop.counter0|divisibleby:'2' %}
+                                    order-1
+                                {% else %}
+                                    order-3
+                                {% endif %}
+                                {% if player.is_win %}
+                                    badge-primary
+                                {% else %}
+                                    badge-danger
+                                {% endif %}">
+                        {% if player.is_win %}
+                            승
+                        {% else %}
+                            패
+                        {% endif %}
+                    </div>
+                    <div class="col-md-auto h2 ml-2 order-4 text-left">
+                        {% if not forloop.counter0|divisibleby:'2' %}
+                        <a href="{{player.user.get_absolute_url}}">
+                            {{player.user.name}}
+                            <span class="h4">({{player.race}})</span>
+                        </a>
+                        {% endif %} 
+                    </div>
+                {% endfor %}
+                <span class="text-secondary order-2 ml-2 mr-2">
+                    <a href="{{match.map.get_absolute_url}}">&nbsp;{{match.map}}&nbsp;</a>
+                </span>
+            </div>
+            <div class="text-secondary ml-2">
+                <small>{{match.date}}</small>
+            </div>
+        </div>
+    </li>
+    {% endfor %}
+</ul>
+<a href="new/" class="btn btn-primary">Add New Match</a>
 {% endblock %}

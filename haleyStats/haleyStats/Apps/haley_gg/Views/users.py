@@ -6,9 +6,10 @@ from django.views.generic import (
     View,
 )
 from django.urls import reverse
+from django.db.models import Q
 
 from ..Models.users import User
-from ..Models.stats import Player
+from ..Models.stats import Player, Match
 from ..forms import UserCreateForm, UserUpdateForm
 
 
@@ -32,14 +33,18 @@ class UserDetailView(SelectUserMixin, View):
     def get(self, request, *args, **kwargs):
         # select user object with name keyword.
         user = self.get_object()
-        # get objects which same as selected user.
-        # it must be pagination. I will manage it later.
-        match_list = Player.objects.filter(user__exact=user)
-        win_rate = user.get_win_rate(user.player_set.all())
+        # get winning rate with player list.(it has foreign key with user model.)
+        # so player_set.all() returns all player model relate with user.
+        odds = user.get_odds(user.player_set.all())
+
+        match_list = Match.objects.filter(
+            player__user=user, match_type='melee')
+        get_odds_by_race = user.get_odds_by_race(match_list)
         context = {
             'user': user,
             'match_list': match_list,
-            'win_rate': win_rate,
+            'odds': odds,
+            'odds_by_race': get_odds_by_race,
         }
         return render(request, self.template_name, context)
 
