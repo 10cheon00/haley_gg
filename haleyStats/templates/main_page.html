@@ -1,8 +1,7 @@
-{% extends 'base.html' %}
-{% block content %}
-<div class="jumbotron">
+{% extends 'base.html' %} {% block content %} {% load static %}
+<div class="jumbotron m-3">
     <form method="GET">
-        <input type="text" name="search-user"/>
+        <input type="text" name="search-user" />
         <button type="submit">
             검색
         </button>

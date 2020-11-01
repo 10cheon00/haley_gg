@@ -1,4 +1,5 @@
-{% extends 'base.html' %} {% block content %} {% load static %}
+{% extends 'Maps/base_map.html' %} 
+{% block content %} {% load static %}
 <!-- <link rel="stylesheet" href="{% static 'Maps/list.css' %}" /> -->
 <div class="container">
     <div class="row py-4 justify-content-center">
@@ -10,13 +11,13 @@
                     <img class="card-img-top" src="{{ map.image.url }}" />
                 </a>
                 <div class="card-body text-center">
-                    <a href="{{map.name}}">
+                    <a href="{{map.get_absolute_url}}">
                         <h4 class="card-title">
                             {{map.name}}
                         </h4>
                     </a>
                     <div class="card-text">
-                        회 매치
+                        {{map.match_count}}회 매치
                     </div>
                 </div>
             </div>

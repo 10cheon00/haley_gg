@@ -17,38 +17,51 @@
             integrity="sha256-DrT5NfxfbHvMHux31Lkhxg42LY6of8TaYyK50jnxRnM="
             crossorigin="anonymous"
         ></script>
-        <style type="text/css">
-            a {
-                text-decoration: none;
-                color: inherit;
-            }
-            a:hover {
-                text-decoration: none;
-                color: grey;
-            }
-        </style>
+        <link 
+            rel="stylesheet"
+            type="text/css"
+            href="/static/base.css/"
+        />
     </head>
 
     <body>
-        <nav class="navbar navbar-expand-md bg-light navbar-light">
+        <nav class="navbar navbar-expand-md navbar-light">
             <div class="container">
                 <div class="navbar-brand">
                     <a href="/" class="navbar-brand">
                         Haley.gg
                     </a>
                 </div>
-                <div class="collapse navbar-collapse">
-                    <div class="navbar-nav">
-                        <a href="/match/" class="nav-items nav-link">전적</a>
-                        <a href="/map/" class="nav-items nav-link">맵</a>
-                        <a href="#" class="nav-items nav-link">Tab C</a>
-                        <a href="#" class="nav-items nav-link">Tab D</a>
-                    </div>
+                <button
+                    class="navbar-toggler"
+                    type="button"
+                    data-toggle="collapse"
+                    data-target="#navbarNav"
+                    aria-controls="navbarNav"
+                    aria-expanded="false"
+                    aria-label="Toggle navigation"
+                >
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <div class="collapse navbar-collapse" id="navbarNav">
+                    <ul class="navbar-nav nav-pills">
+                        <li class="nav-item">
+                            <a href="/match/" class="nav-link {% block nav-match %}{% endblock nav-match %}">전적</a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="/map/" class="nav-link {% block nav-map %}{% endblock nav-map %}">맵</a>
+                        </li>
+                    </ul>
                 </div>
+                {% block nav-search %}
+                {% endblock nav-search %}
             </div>
         </nav>
         <div class="content container">
-            {% block content %} {% endblock %}
+                {% block content %} {% endblock %}
         </div>
+        <footer class="page-footer text-center m-3">
+            This is footer.
+        </footer>
     </body>
 </html>

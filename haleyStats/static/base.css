@@ -1,0 +1,27 @@
+a {
+    text-decoration: none;
+    color: inherit;
+}
+a:hover {
+    text-decoration: none;
+    color: grey;
+}
+
+.content{
+    background-color:white;
+    height: auto;
+}
+
+body{
+    /* background-color:#FFAE95 */
+    background-color:#DADADA
+}
+
+.navbar{
+    background-color:#FFB291;
+    border-bottom:0px;
+}
+
+.nav-link.active{
+    background-color:#FF6F30;
+}

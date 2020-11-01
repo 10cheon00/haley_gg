@@ -115,9 +115,6 @@ class MatchForm(forms.ModelForm):
             'map',
         ]
 
-    def __init__(self, *args, **kwargs):
-        super(MatchForm, self).__init__(*args, **kwargs)
-
     def clean(self):
         cleaned_data = super(MatchForm, self).clean()
         if self.errors:

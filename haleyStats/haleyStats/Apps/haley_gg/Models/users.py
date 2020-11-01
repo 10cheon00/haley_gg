@@ -51,12 +51,12 @@ class User(models.Model):
             'Z': 0,
         }
         if melee_match_list:
-            count_victory_dict = {
+            victory_count_dict = {
                 'T': 0,
                 'P': 0,
                 'Z': 0,
             }
-            count_match_dict = {
+            match_count_dict = {
                 'T': 0,
                 'P': 0,
                 'Z': 0,
@@ -71,15 +71,15 @@ class User(models.Model):
                 for player in match.player_set.all():
                     if player.user != self:
                         # count by opponent race.
-                        count_match_dict[player.race] += 1
+                        match_count_dict[player.race] += 1
                         # if player wins, count by opponent race.
                         if not player.is_win:
-                            count_victory_dict[player.race] += 1
+                            victory_count_dict[player.race] += 1
             for key in rates.keys():
                 try:
                     # Get player_s race vs Z,P odds.
                     rates[key] = (math.floor(
-                        count_victory_dict[key] / count_match_dict[key] * 100))
+                        victory_count_dict[key] / match_count_dict[key] * 100))
                 except ZeroDivisionError:
                     rates[key] = 0
         return rates

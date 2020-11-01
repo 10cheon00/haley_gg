@@ -6,7 +6,6 @@ from django.views.generic import (
     View,
 )
 from django.urls import reverse
-from django.db.models import Q
 
 from ..Models.users import User
 from ..Models.stats import Player, Match

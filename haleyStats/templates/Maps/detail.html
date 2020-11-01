@@ -1,4 +1,5 @@
-{% extends 'base.html' %} {% block content %} {% load static %}
+{% extends 'Maps/base_map.html' %} 
+{% block content %} {% load static %}
 <link rel="stylesheet" href="{% static 'Maps/detail.css' %}" />
 <div class="profile">
     <div class="row map-info bg-dark">
@@ -9,8 +10,25 @@
             <div class="map-name text-white">
                 {{map.name}}
             </div>
-            <small class="text-secondary">{{match_count}} 회 매치</small>
+            <small class="text-secondary">{{map.match_count}} 회 매치</small>
         </div>
     </div>
-    {% endblock content %}
-</div>
+    <div class="row">
+        {% for winner, odds_dict in odds_dict_by_race.items %}
+        <div class="col-md-4">
+            <div class="jumbotron m-3">
+                <div class="h2 text-center">
+                    {{winner}}
+                </div>
+                <hr>
+                {% for loser, odd in odds_dict.items %}
+                <div class="h5">
+                    vs {{loser}}&nbsp;:&nbsp;{{odd}}%
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>    
+{% endblock content %}

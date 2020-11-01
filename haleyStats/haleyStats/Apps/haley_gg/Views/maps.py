@@ -14,7 +14,9 @@ from ..forms import MapForm
 # Select a map object with a name keyword.
 class SelectMapMixin(object):
     def get_object(self):
-        return get_object_or_404(Map, name__iexact=self.kwargs['name'])
+        map = get_object_or_404(Map, name__iexact=self.kwargs['name'])
+        map.update_match_count()
+        return map
 
 
 # Show all map objects.
@@ -25,9 +27,10 @@ class MapListView(View):
     def get(self, request, *args, **kwargs):
         # Must be pagination.
         maps = Map.objects.all()
+        for map in maps:
+            map.update_match_count()
         context = {
             'maps': maps,
-            # must be send match_count for each map.
         }
         return render(request, self.template_name, context)
 
@@ -45,10 +48,11 @@ class MapDetailView(SelectMapMixin, View):
 
     def get(self, request, *args, **kwargs):
         map = self.get_object()
-        match_count = map.match_set.all().count()
+        # get statistic data.
+        odds_dict_by_race = map.odds_dict_by_race()
         context = {
             'map': map,
-            'match_count': match_count,
+            'odds_dict_by_race': odds_dict_by_race,
         }
         return render(request, self.template_name, context)
 
