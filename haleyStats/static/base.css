@@ -8,20 +8,14 @@ a:hover {
 }
 
 .content{
-    background-color:white;
+    background-color:#dadada;
     height: auto;
 }
-
-body{
-    /* background-color:#FFAE95 */
-    background-color:#DADADA
-}
-
 .navbar{
     background-color:#FFB291;
     border-bottom:0px;
 }
 
-.nav-link.active{
-    background-color:#FF6F30;
+.navbar-nav > li > a.active {
+    background-color: #FF6F30!important;
 }

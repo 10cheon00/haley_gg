@@ -11,4 +11,4 @@ def main_page(request):
     #         user = get_object_or_404(User, name__iexact=user_name)
     #         if user:
     #             return redirect('haley_gg:users_detail', user.name)
-    return render(request, "main_page.html", {})
+    return render(request, "main-page.html", {})

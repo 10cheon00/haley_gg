@@ -1,5 +1,6 @@
 {% extends 'base.html' %} {% block content %} {% load static %}
 <link rel="stylesheet" href="{% static 'User/detail.css' %}" />
+<link rel="text/javascript" href="{% static 'User/chart.js' %}" />
 <div class="profile">
     <div class="jumbotron rounded-0 text-light {{user.most_race}}">
         <h1 class="jumbotron-heading">
@@ -18,7 +19,7 @@
 </div>
 <hr>
 <div class="statistics-summary">
-    <div class="h2 m-3">최근 전적 - 승률 : {{odds}}%</div>
+    <div class="h2 m-3">최근 전적 - 승률 : {{winning_rate}}%</div>
 </div>
 <div class="match-list">
     <ul class="list-group">
@@ -41,7 +42,9 @@
                 <small class="text-secondary ml-3 mr-3">{{match.date}}</small>
                 <span class="h4">
                     {% for player in match.player_set.all %} 
-                        <a href="{{player.user.get_absolute_url}}">{{player.user.name}}</a>&nbsp;
+                        <a href="{{player.user.get_absolute_url}}"
+                        >{{player.user.name}}&nbsp;<span class="h6 text-secondary"
+                            >({{player.race}})</span></a>
                     {% endfor %}
                 </span>
             </li>
@@ -54,10 +57,13 @@
         종족별 승률
     </div>
     <div class="h4 row justify-content-center">
-        {% for key, value in odds_by_race.items %}
-            <span class="col-md-4">
-                vs&nbsp;{{key}}&nbsp;{{value}}%
-            </span>
+        {% for race, rates in winning_rate_by_race.items %}
+        <div class="col-md-4">
+            <canvas 
+                id="pieChart{{forloop.counter}}" 
+                onclick="new_chart('pieChart{{forloop.counter}}', {{race}}, {{rates}});">
+            </canvas>
+        </div>
         {% endfor %}
     </div>
 </div>

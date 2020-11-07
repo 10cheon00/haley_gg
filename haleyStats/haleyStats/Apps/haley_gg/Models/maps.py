@@ -1,8 +1,6 @@
 from django.db import models
 from django.urls import reverse
 
-import math
-
 
 class Map(models.Model):
 
@@ -30,35 +28,40 @@ class Map(models.Model):
         self.match_count = self.match_set.all().count()
         self.save()
 
-    # Calculate odds by race.
-    # Odds to be calculated.
+    # Calculate statistics on victory by race.
+    # statistics on victory to be calculated.
     # - T vsZ, P
     # - Z vsP, (T)
     # - P vs(T, Z)
     # () is already calculated.
     # Only works when match_type is melee.
-    def odds_dict_by_race(self):
-        odds_dict_by_race = {
-            'T': {'Z': 0, 'P': 0},
-            'P': {'T': 0, 'Z': 0},
-            'Z': {'T': 0, 'P': 0},
-        }
-        victory_count_dict = {
-            'T': {'Z': 0, 'P': 0},
-            'P': {'T': 0, 'Z': 0},
-            'Z': {'T': 0, 'P': 0},
+    def get_statistics_on_winning_rate(self):
+        winning_rate_dict = {
+            'T': {
+                # first element is number of wins.
+                # second is winning rate.
+                'T': [0, 0], 'Z': [0, 0], 'P': [0, 0]
+            },
+            'Z': {
+                'T': [0, 0], 'Z': [0, 0], 'P': [0, 0]
+            },
+            'P': {
+                'T': [0, 0], 'Z': [0, 0], 'P': [0, 0]
+            },
         }
         for match in self.match_set.all():
-            win_race = ''
-            lose_race = ''
+            winner_race = ''
+            loser_race = ''
             for player in match.player_set.all():
                 if player.is_win:
-                    win_race = player.race
+                    winner_race = player.race
                 else:
-                    lose_race = player.race
-            if win_race != lose_race:
-                victory_count_dict[win_race][lose_race] += 1
-        # 이제 누가 어느 종족을 이겼는지 victory_count_dict에 다 저장되어있다.
+                    loser_race = player.race
+            # If winner's race same as loser's race, just add.
+            # Same race match just have number of matches.
+            winning_rate_dict[winner_race][loser_race][0] += 1
+        # 이제 누가 어느 종족을 이겼는지 winning_rate_dict에 다 저장되어있다.
+        # So, winning_rate_dict has all data who win or lose.
         race_list = ['T', 'P', 'Z']
         for winner in race_list:
             for loser in race_list:
@@ -66,12 +69,23 @@ class Map(models.Model):
                 if winner == loser:
                     continue
 
-                win_count = victory_count_dict[winner][loser]
-                loser_count = victory_count_dict[loser][winner]
+                win_count = winning_rate_dict[winner][loser][0]
+                loser_count = winning_rate_dict[loser][winner][0]
                 match_count = win_count + loser_count
                 try:
-                    odds_dict_by_race[winner][loser] = math.floor(
-                        win_count / match_count * 100)
+                    winning_rate_dict[winner][loser][1] = round(
+                        win_count / match_count * 100, 2)
                 except ZeroDivisionError:
-                    odds_dict_by_race[winner][loser] = 0
-        return odds_dict_by_race
+                    winning_rate_dict[winner][loser][1] = 0
+        return winning_rate_dict
+
+
+# Map type for insert proleague results.
+class MapType(models.Model):
+    # map type name
+    type_name = models.CharField(max_length=10, default="", null=False)
+    # map list
+    map_list = models.ManyToManyField(Map)
+
+    class Meta:
+        ordering = ['type_name']

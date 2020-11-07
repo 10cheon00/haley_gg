@@ -9,7 +9,7 @@ from django.urls import reverse
 
 from ..Models.users import User
 from ..Models.stats import Player, Match
-from ..forms import UserCreateForm, UserUpdateForm
+from ..Forms.users import CreateUserForm, UpdateUserForm
 
 
 # Select a user object with a name keyword.
@@ -22,7 +22,7 @@ class SelectUserMixin(object):
 class UserCreateView(CreateView):
     model = User
     template_name = 'Pattern/create.html'
-    form_class = UserCreateForm
+    form_class = CreateUserForm
 
 
 # Show details of a user object.
@@ -34,16 +34,16 @@ class UserDetailView(SelectUserMixin, View):
         user = self.get_object()
         # get winning rate with player list.(it has foreign key with user model.)
         # so player_set.all() returns all player model relate with user.
-        odds = user.get_odds(user.player_set.all())
+        winning_rate = user.get_winning_rate(user.player_set.all())
 
         match_list = Match.objects.filter(
-            player__user=user, match_type='melee')
-        get_odds_by_race = user.get_odds_by_race(match_list)
+            player__user=user, match_type='one_on_one')
+        get_winning_rate_by_race = user.get_winning_rate_by_race(match_list)
         context = {
             'user': user,
             'match_list': match_list,
-            'odds': odds,
-            'odds_by_race': get_odds_by_race,
+            'winning_rate': winning_rate,
+            'winning_rate_by_race': get_winning_rate_by_race,
         }
         return render(request, self.template_name, context)
 
@@ -52,7 +52,7 @@ class UserDetailView(SelectUserMixin, View):
 class UserUpdateView(SelectUserMixin, UpdateView):
     model = User
     template_name = 'Pattern/update.html'
-    form_class = UserUpdateForm
+    form_class = UpdateUserForm
 
 
 # Delete a user object.

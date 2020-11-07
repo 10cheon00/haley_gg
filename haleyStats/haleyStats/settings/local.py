@@ -6,6 +6,7 @@ ALLOWED_HOSTS += ['*']
 
 INSTALLED_APPS += [
     'haleyStats.Apps.haley_gg.apps.HaleyGgConfig',
+    'bootstrap4',
 ]
 
 LANGUAGE_CODE = 'ko-kr'

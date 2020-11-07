@@ -2,8 +2,6 @@ from django.db import models
 from django.utils import timezone
 from django.urls import reverse
 
-import math
-
 race_list = (
     ('T', 'Terran'),
     ('P', 'Protoss'),
@@ -32,19 +30,19 @@ class User(models.Model):
         return reverse("haley_gg:users_detail", kwargs={"name": self.name})
 
     # Get win rate no matter of player's race.
-    def get_odds(self, queryset):
+    def get_winning_rate(self, queryset):
         if queryset:
             match_count = queryset.count()
             match_win_count = queryset.filter(is_win=True).count()
             try:
-                win_rate = math.floor(match_win_count / match_count * 100)
+                win_rate = round(match_win_count / match_count * 100, 2)
             except ZeroDivisionError:
                 return 0
             return win_rate
         return 0
 
-    # Get odds by race
-    def get_odds_by_race(self, melee_match_list):
+    # Get winning_rate by race
+    def get_winning_rate_by_race(self, melee_match_list):
         rates = {
             'T': 0,
             'P': 0,
@@ -77,9 +75,10 @@ class User(models.Model):
                             victory_count_dict[player.race] += 1
             for key in rates.keys():
                 try:
-                    # Get player_s race vs Z,P odds.
-                    rates[key] = (math.floor(
-                        victory_count_dict[key] / match_count_dict[key] * 100))
+                    # Get player_s race vs Z,P winning_rate.
+                    rates[key] = round(
+                        victory_count_dict[key] / match_count_dict[key] * 100,
+                        2)
                 except ZeroDivisionError:
                     rates[key] = 0
         return rates

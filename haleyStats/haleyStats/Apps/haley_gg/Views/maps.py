@@ -8,7 +8,7 @@ from django.views.generic import (
 from django.urls import reverse
 
 from ..Models.maps import Map
-from ..forms import MapForm
+from ..Forms.maps import MapForm
 
 
 # Select a map object with a name keyword.
@@ -49,10 +49,10 @@ class MapDetailView(SelectMapMixin, View):
     def get(self, request, *args, **kwargs):
         map = self.get_object()
         # get statistic data.
-        odds_dict_by_race = map.odds_dict_by_race()
+        winning_rate_dict = map.get_statistics_on_winning_rate()
         context = {
             'map': map,
-            'odds_dict_by_race': odds_dict_by_race,
+            'winning_rate_dict': winning_rate_dict,
         }
         return render(request, self.template_name, context)
 
@@ -70,3 +70,5 @@ class MapDeleteView(SelectMapMixin, DeleteView):
 
     def get_success_url(self):
         return reverse('haley_gg:maps_list')
+
+# MapTypeViews should be write below.

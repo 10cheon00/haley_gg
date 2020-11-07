@@ -1,8 +1,8 @@
-{% extends 'Maps/base_map.html' %} 
+{% extends 'Maps/base-map.html' %} 
 {% block content %} {% load static %}
 <!-- <link rel="stylesheet" href="{% static 'Maps/list.css' %}" /> -->
-<div class="container">
-    <div class="row py-4 justify-content-center">
+<div class="container p-3">
+    <div class="row justify-content-center">
         {% for map in maps %}
         <div class="col-md-4 p-3">
             <div class="card">
@@ -24,6 +24,10 @@
         </div>
         {% endfor %}
     </div>
+    <a href="new/" 
+       class="btn text-white"
+       style="background-color:#4A4A4A"
+    >New Map</a>
 </div>
 
 {% endblock %}

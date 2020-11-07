@@ -1,4 +1,4 @@
-{% extends 'Maps/base_map.html' %} 
+{% extends 'Maps/base-map.html' %} 
 {% block content %} {% load static %}
 <link rel="stylesheet" href="{% static 'Maps/detail.css' %}" />
 <div class="profile">
@@ -14,21 +14,36 @@
         </div>
     </div>
     <div class="row">
-        {% for winner, odds_dict in odds_dict_by_race.items %}
-        <div class="col-md-4">
-            <div class="jumbotron m-3">
-                <div class="h2 text-center">
-                    {{winner}}
-                </div>
-                <hr>
-                {% for loser, odd in odds_dict.items %}
-                <div class="h5">
-                    vs {{loser}}&nbsp;:&nbsp;{{odd}}%
-                </div>
+        <table class="table table-white table-hover m-3 text-center ">
+            <thead>
+                <tr>
+                    <th scope="col">종족</th>
+                    <th scope="col">vs T</th>
+                    <th scope="col">vs Z</th>
+                    <th scope="col">vs P</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for winner_race, statistic_datas in winning_rate_dict.items %}
+                <tr >
+                    <th scope="row" class="align-middle">
+                        {{winner_race}}
+                    </th>
+                    {% for loser_race, stats in statistic_datas.items %}
+                        {% if winner_race == loser_race %}
+                        <td class="align-middle">{{stats|first}} 전</td>
+                        {% else %}
+                        <td class="align-middle">
+                            {{stats|first}} 승<br/>
+                            {{stats|last}}%
+                        </td>
+                        {% endif %}
+                    {% endfor %}
+                </tr>
                 {% endfor %}
-            </div>
-        </div>
-        {% endfor %}
+            </tbody>
+        </table>
     </div>
-</div>    
+</div>
+{{number_of_wins_by_race}}
 {% endblock content %}
