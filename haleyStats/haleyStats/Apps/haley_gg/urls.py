@@ -1,8 +1,6 @@
 from django.urls import path
 
-from .Views import maps
-from .Views import users
-from .Views import stats
+from . import views
 
 
 app_name = 'haley_gg'
@@ -12,48 +10,51 @@ urlpatterns = []
 # maps.urls
 urlpatterns += [
     path('map/',
-         maps.MapListView.as_view(),
+         views.MapListView.as_view(),
          name="maps_list"),
-    path('map/new/',
-         maps.MapCreateView.as_view(),
+    path('map/new-map/',
+         views.MapCreateView.as_view(),
+         name="maps_create"),
+    path('map/new-map-type/',
+         views.MapCreateView.as_view(),
          name="maps_create"),
     path('map/<str:name>/',
-         maps.MapDetailView.as_view(),
+         views.MapDetailView.as_view(),
          name="maps_detail"),
     path('map/<str:name>/delete/',
-         maps.MapDeleteView.as_view(),
+         views.MapDeleteView.as_view(),
          name="maps_delete"),
     path('map/<str:name>/update/',
-         maps.MapUpdateView.as_view(),
+         views.MapUpdateView.as_view(),
          name="maps_update"),
 ]
 
 # users.urls
 urlpatterns += [
     path('user/new/',
-         users.UserCreateView.as_view(),
+         views.UserCreateView.as_view(),
          name="users_create"),
     path('user/<str:name>/',
-         users.UserDetailView.as_view(),
+         views.UserDetailView.as_view(),
          name="users_detail"),
     path('user/<str:name>/delete/',
-         users.UserDeleteView.as_view(),
+         views.UserDeleteView.as_view(),
          name="users_delete"),
     path('user/<str:name>/update/',
-         users.UserUpdateView.as_view(),
+         views.UserUpdateView.as_view(),
          name="users_update"),
 ]
 
 # stats.urls
 urlpatterns += [
     path('match/',
-         stats.MatchListView.as_view(),
+         views.MatchListView.as_view(),
          name="match_list"),
     path('match/new-starleague',
-         stats.CreateStarLeagueMatchView.as_view(),
+         views.CreateStarLeagueMatchView.as_view(),
          name="match_create"),
     path('match/new-proleague',
-         stats.CreateProLeagueMatchView.as_view(),
+         views.CreateProLeagueMatchView.as_view(),
          name="match_create"),
     # path('match/<int:id>/update/',
     #      stats.UpdateMatchView.as_view(),
