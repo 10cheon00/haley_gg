@@ -90,32 +90,26 @@ class SelectUserMixin(object):
 
 # Create a user object.
 class UserCreateView(CreateView):
-    model = User
     template_name = 'Pattern/create.html'
+    model = User
     form_class = CreateUserForm
 
 
 # Show details of a user object.
-class UserDetailView(SelectUserMixin, View):
+class UserDetailView(SelectUserMixin, DetailView):
     template_name = 'Users/detail.html'
+    model = User
+    context_object_name = 'user'
 
-    def get(self, request, *args, **kwargs):
-        # select user object with name keyword.
-        user = self.get_object()
-        # get winning rate with player list.(it has foreign key with user model.)
-        # so player_set.all() returns all player model relate with user.
-        winning_rate = user.get_winning_rate(user.player_set.all())
-
+    def get_context_data(self, *args, **kwargs):
+        context = super(UserDetailView, self).get_context_data(*args, **kwargs)
         match_list = Match.objects.filter(
-            player__user=user, match_type='one_on_one')
-        get_winning_rate_by_race = user.get_winning_rate_by_race(match_list)
-        context = {
-            'user': user,
-            'match_list': match_list,
-            'winning_rate': winning_rate,
-            'winning_rate_by_race': get_winning_rate_by_race,
-        }
-        return render(request, self.template_name, context)
+            player__user=self.object, match_type='one_on_one')
+        context['match_list'] = match_list
+        context['winning_rate'] = self.object.get_winning_rate(
+            self.object.player_set.all())
+        context['get_winning_rate_by_race'] = self.object.get_winning_rate_by_race(match_list)
+        return context
 
 
 # Update a user object.
