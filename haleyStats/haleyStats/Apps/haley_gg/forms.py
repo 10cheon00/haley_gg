@@ -1,8 +1,10 @@
+import datetime
+
 from django import forms
 
 from .models import User
 from .models import Map
-from .models import Match
+from .validator import load_document
 
 
 # Create User model but not provide 'career' field.
@@ -14,6 +16,9 @@ class CreateUserForm(forms.ModelForm):
             'joined_date',
             'most_race'
         ]
+        widgets = {
+            'joined_date': forms.NumberInput(attrs={'type': 'date'}),
+        }
 
     # Check that the user name is already exist.
     def clean_name(self):
@@ -31,12 +36,16 @@ class CreateUserForm(forms.ModelForm):
 class UpdateUserForm(CreateUserForm):
     class Meta(CreateUserForm.Meta):
         # Show all field in User model.
+        model = User
         fields = [
             'name',
             'joined_date',
             'most_race',
             'career'
         ]
+        widgets = {
+            'joined-date': forms.NumberInput(attrs={'type': 'date'}),
+        }
 
 
 # Map form.
@@ -100,36 +109,7 @@ class MapForm(forms.ModelForm):
         return image_file
 
 
-# Match form
-class CreateMatchForm(forms.ModelForm):
-    class Meta:
-        model = Match
-        fields = [
-            'date',
-            'league',
-            'name',
-            'description',
-            'remark',
-        ]
-
-    def clean(self):
-        cleaned_data = super(CreateMatchForm, self).clean()
-        if self.errors:
-            return cleaned_data
-        # Check reduplication on rounds and set.
-        if Match.objects.filter(name=cleaned_data['name'],
-                                description=cleaned_data['description']
-                                ).exists():
-            error_msg = u"Already exist match. Check match name or set."
-            self.add_error('description', error_msg)
-        return cleaned_data
-
-    def save(self, commit=True, **kwargs):
-        instance = super(CreateMatchForm, self).save(commit=False)
-
-        if kwargs:
-            instance.match_type = kwargs['match-type']
-        if commit:
-            instance.save()
-
-# 다시 playerformset으로?
+class MatchSheetForm(forms.Form):
+    document_url = forms.URLField(
+        label="데이터 스프레드시트 URL",
+        validators=[load_document])

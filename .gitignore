@@ -7,4 +7,5 @@ media
 # files
 goorm.manifest
 secrets.json
+gspread-key.json
 .scx

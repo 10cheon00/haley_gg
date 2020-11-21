@@ -8,16 +8,20 @@
         {% for match in page_obj %}
         <li class="list-group-item">
             <div class="d-flex justify-content-between align-items-center">
-                <div class="mr-2">
-                    {{match.league_name}} {{match.name}} {{match.set}}경기
+                <div class="mr-2 text-center">
+                    {{ match.league.name }}
+                    {{ match.name }}
+                    <div class="text-secondary">
+                        {{ match.remark }}
+                    </div>
                 </div>
-                <div class="row ml-2 mr-2 w-auto align-items-center">
+                <div class="row ml-2 mr-2 align-items-center">
                     {% for player in match.player_set.all %}
-                        <div class="col-md-auto h2 mr-2 order-0 text-right">
+                        <div class="col-md-auto h2 order-0 text-right">
                             {% if forloop.counter0|divisibleby:'2' %}
-                            <a href="{{player.user.get_absolute_url}}">
-                                {{player.user.name}}
-                                <span class="h4">({{player.race}})</span>
+                            <a href="{{ player.user.get_absolute_url }}">
+                                {{ player.user.name }}
+                                <span class="h4">({{ player.race }})</span>
                             </a>
                             {% endif %}
                         </div>
@@ -38,21 +42,21 @@
                                 패
                             {% endif %}
                         </div>
-                        <div class="col-md-auto h2 ml-2 order-4 text-left">
+                        <div class="col-md-auto h2 order-4 text-left">
                             {% if not forloop.counter0|divisibleby:'2' %}
-                            <a href="{{player.user.get_absolute_url}}">
-                                {{player.user.name}}
-                                <span class="h4">({{player.race}})</span>
+                            <a href="{{ player.user.get_absolute_url }}">
+                                {{ player.user.name }}
+                                <span class="h4">({{ player.race }})</span>
                             </a>
                             {% endif %} 
                         </div>
                     {% endfor %}
                     <span class="text-secondary order-2 ml-2 mr-2">
-                        <a href="{{match.map.get_absolute_url}}">&nbsp;{{match.map}}&nbsp;</a>
+                        <a href="{{ match.map.get_absolute_url }}">&nbsp;{{ match.map }}&nbsp;</a>
                     </span>
                 </div>
                 <div class="text-secondary ml-2">
-                    <small>{{match.date}}</small>
+                    <small>{{ match.date }}</small>
                 </div>
             </div>
         </li>
@@ -75,13 +79,9 @@
             {% endif %}
         </span>
     </div>
-    <a href="new-proleague" 
+    <a href="load-sheet/" 
        class="btn text-white"
        style="background-color:#005AE2"
-    >New Proleague Match</a>
-    <a href="new-starleague"
-       class="btn text-white"
-       style="background-color:#04A4D5"
-    >New Starleague Match</a>
+    >Load Matches</a>
 </div>
 {% endblock content %}

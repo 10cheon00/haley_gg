@@ -4,24 +4,24 @@
 <link rel="stylesheet" href="{% static 'User/detail.css' %}" />
 <link rel="text/javascript" href="{% static 'User/chart.js' %}" />
 <div class="profile">
-    <div class="jumbotron rounded-0 text-light {{user.most_race}}">
+    <div class="jumbotron rounded-0 text-light {{ user.most_race }}">
         <h1 class="jumbotron-heading">
-            <img class="icon rounded-circle {{user.most_race}}" />
-            {{user.name}}
-            <span class="h4 text-secondary">({{user.most_race}})</span>
+            <img class="icon rounded-circle {{ user.most_race }}" />
+            {{ user.name }}
+            <span class="h4 text-secondary">({{ user.most_race }})</span>
         </h1>
         <h3></h3>
-        <small class="text-secondary">{{user.joined_date}}에 가입</small>
+        <small class="text-secondary">{{ user.joined_date }}에 가입</small>
     </div>
     <hr>
     <div class="h2 m-3">커리어</div>
     <div class="jumbotron rounded-0 ">
-        {{user.career}}
+        {{ user.career }}
     </div>
 </div>
 <hr>
 <div class="statistics-summary">
-    <div class="h2 m-3">최근 전적 - 승률 : {{winning_rate}}%</div>
+    <div class="h2 m-3">최근 전적 - 승률 : {{ winning_rate }}%&nbsp;{{ winning_status }}</div>
 </div>
 <div class="match-list">
     <ul class="list-group">
@@ -39,14 +39,14 @@
                     {% endfor %}"
             >
                 <span class="h5"
-                    >{{match.league_name}}&nbsp;{{match.name}}&nbsp;{{match.set}}&nbsp;경기
+                    >{{ match.league_name }}&nbsp;{{ match.name }}&nbsp;{{ match.set }}&nbsp;경기
                 </span>
-                <small class="text-secondary ml-3 mr-3">{{match.date}}</small>
+                <small class="text-secondary ml-3 mr-3">{{ match.date }}</small>
                 <span class="h4">
                     {% for player in match.player_set.all %} 
-                        <a href="{{player.user.get_absolute_url}}"
-                        >{{player.user.name}}&nbsp;<span class="h6 text-secondary"
-                            >({{player.race}})</span></a>
+                        <a href="{{ player.user.get_absolute_url }}"
+                        >{{ player.user.name }}&nbsp;<span class="h6 text-secondary"
+                            >({{ player.race }})</span></a>
                     {% endfor %}
                 </span>
             </li>
@@ -62,8 +62,8 @@
         {% for race, rates in winning_rate_by_race.items %}
         <div class="col-md-4">
             <canvas 
-                id="pieChart{{forloop.counter}}" 
-                onclick="new_chart('pieChart{{forloop.counter}}', {{race}}, {{rates}});">
+                id="pieChart{{ forloop.counter }}" 
+                onclick="new_chart('pieChart{{ forloop.counter }}', {{ race }}, {{ rates }});">
             </canvas>
         </div>
         {% endfor %}

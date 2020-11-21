@@ -4,18 +4,14 @@
     <hr>
     <form method="POST" enctype="multipart/form-data" novalidate>
         {% csrf_token %}
-        <div class="form-group row">
-            <div class="col">
-                {% bootstrap_form match_form layout='horizontal' %}
-            </div>
+        <div class="form-group">
+            {{form.as_ul}}
         </div>
         <hr>
         {{ player_formset.management_form}}
         <div class="form-row player-form" id="form-container">
             {% for player_form in player_formset %}
-                <div class="form-group col-md-6">
-                    {% bootstrap_form player_form layout='horizontal' %}
-                </div>
+                {{player_form.as_ul}}    
             {% endfor %}
         </div>
         <hr/>

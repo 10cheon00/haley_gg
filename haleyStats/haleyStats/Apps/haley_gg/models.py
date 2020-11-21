@@ -1,5 +1,7 @@
 # haley_gg/models.py
 
+import datetime
+
 from django.db import models
 from django.utils import timezone
 from django.urls import reverse
@@ -40,7 +42,7 @@ class User(models.Model):
     def get_absolute_url(self):
         return reverse("haley_gg:users_detail", kwargs={"name": self.name})
 
-    # Get win rate no matter of player's race.
+    # Return win rate no matter of player's race.
     def get_winning_rate(self, queryset):
         if queryset:
             match_count = queryset.count()
@@ -52,7 +54,7 @@ class User(models.Model):
             return win_rate
         return 0
 
-    # Get winning_rate by race
+    # Return winning_rate by race
     def get_winning_rate_by_race(self, melee_match_list):
         rates = {
             'T': 0,
@@ -94,6 +96,29 @@ class User(models.Model):
                     rates[key] = 0
         return rates
 
+    # Returns the winning status.
+    def get_winning_status(self):
+        count = 0
+        last_status = True
+        for player in self.player_set.all():
+            if count == 0:
+                last_status = player.is_win
+            else:
+                if last_status is not player.is_win:
+                    break
+            if player.is_win:
+                count += 1
+            else:
+                count -= 1
+
+        string = [0, '']
+        if count > 0:
+            string[1] = '연승'
+        else:
+            string[1] = '연패'
+        string[0] = str(abs(count))
+        return ''.join(string)
+
 
 class Map(models.Model):
     # map name
@@ -103,7 +128,8 @@ class Map(models.Model):
 
     # map files(ex: .scx, .scm, or zip files)
     file = models.FileField(
-        upload_to="Maps/files/")
+        upload_to="Maps/files/",
+        blank=True)
 
     # map images
     image = models.ImageField(
@@ -117,11 +143,11 @@ class Map(models.Model):
     class Meta:
         ordering = ['-match_count', 'name']
 
-    def get_absolute_url(self):
-        return reverse('haley_gg:maps_detail', kwargs={"name": self.name})
-
     def __str__(self):
         return self.name
+
+    def get_absolute_url(self):
+        return reverse('haley_gg:maps_detail', kwargs={"name": self.name})
 
     # Count matches related this map.
     def update_match_count(self):
@@ -160,7 +186,6 @@ class Map(models.Model):
             # If winner's race same as loser's race, just add.
             # Same race match just have number of matches.
             winning_rate_dict[winner_race][loser_race][0] += 1
-        # 이제 누가 어느 종족을 이겼는지 winning_rate_dict에 다 저장되어있다.
         # So, winning_rate_dict has all data who win or lose.
         race_list = ['T', 'P', 'Z']
         for winner in race_list:
@@ -178,21 +203,6 @@ class Map(models.Model):
                 except ZeroDivisionError:
                     winning_rate_dict[winner][loser][1] = 0
         return winning_rate_dict
-
-
-# Map type for insert proleague results.
-class MapType(models.Model):
-    # map type name
-    type_name = models.CharField(
-        max_length=10,
-        default="")
-
-    # map list
-    map_list = models.ManyToManyField(
-        Map)
-
-    class Meta:
-        ordering = ['type_name']
 
 
 class League(models.Model):
@@ -215,43 +225,49 @@ class League(models.Model):
             'name'
         ]
 
+    def __str__(self):
+        return self.name
+
 
 # All one on one match stored this type.
 class Match(models.Model):
     # league
     league = models.ForeignKey(
         League,
-        on_delete=models.CASCADE)
+        on_delete=models.CASCADE,
+        verbose_name="리그")
 
     # Round, dual tournament or something like that. Seems like game title
     # ex. Round 1, 16강 A조 ... etc
     name = models.CharField(
         max_length=30,
         default="",
-        blank=True)
+        verbose_name="매치 제목")
 
-    # additional description such as set, ace match, winner's match etc ...
-    description = models.CharField(
-        max_length=50,
-        default="",
-        blank=True)
+    # Disabled.
+    # # additional description such as set, ace match, winner's match etc ...
+    # description = models.CharField(
+    #     max_length=50,
+    #     default="",
+    #     verbose_name="매치 부제목")
 
     # match date
     date = models.DateField(
         default=timezone.now,
-        blank=True)
+        verbose_name="경기 날짜")
 
     # map used in match
     map = models.ForeignKey(
         Map,
         on_delete=models.CASCADE,
-        blank=True)
+        verbose_name="맵")
 
     # remake for this match
     remark = models.CharField(
         max_length=50,
         default="",
-        blank=True)
+        blank=True,
+        verbose_name="비고")
 
     # Below fields are not shown to user.
     # is one-on-one match or top and bottom?
@@ -267,34 +283,132 @@ class Match(models.Model):
         ordering = [
             '-date',
             '-name',
-            '-description',
         ]
 
     def __str__(self):
         str = self.get_name()
         return ''.join(str)
 
+    def get_absolute_url(self, **kwargs):
+        return reverse('haley_gg:match_list')
+
     # Return match name in list type.
     def get_name(self):
         string = []
         string.append(str(self.date))
         string.append(' l ')
-        string.append(str(self.league_name))
+        string.append(str(self.league.__str__()))
         string.append(' ')
         string.append(str(self.name))
         string.append(' ')
         string.append(str(self.description))
         return string
 
-    def get_absolute_url(self, **kwargs):
-        return reverse('haley_gg:match_list')
+    @classmethod
+    def create_data_from_sheet(self, doc):
+        melee_sheet = doc.worksheet('개인전적Data')
+        match_result = melee_sheet.row_values(1497)
+        # 한번 불러오면 다음 줄을 불러오는게 아니라 그 다음줄을 불러와야 한다.
+        # 불러올 때도 데이터가 있을 때에만 새로 저장을 시도하기.
+        """
+        [
+        '19.04.13',
+        'HPL S1 Day 1 Team Midori vs. 불독이 멍멍 팀 Match 1 set 1',
+        'Midori',
+        'P',
+        'Mango',
+        'Z',
+        '투혼',
+        'Mango',
+        '승',
+        '1 연승', '1', '1']
+        """
+        # match date
+        date = match_result[0]
+        date = datetime.datetime.strptime(date, '%y.%m.%d')
+
+        # League
+        name = match_result[1]
+        league_type = ""
+        index = name.find('HSL')
+        if index < 0:
+            index = name.find('HPL')
+            league_type = "proleague"
+        else:
+            league_type = "starleague"
+        league, created = League.objects.get_or_create(
+            name__iexact=name[0:index+6],
+            defaults={
+                'name': name[0:index+6],
+                'type': league_type,
+            })
+
+        # name
+        name = name[index+7:]
+
+        # map
+        map, created = Map.objects.get_or_create(
+            name=match_result[6])
+
+        # remark
+        remark = ""
+        try:
+            # if match is abstention...
+            remark = match_result[13] or match_result[12]
+
+        except IndexError:
+            remark = ""
+        if "기권" in remark:
+            remark = "기권 경기"
+        elif "몰수" in remark:
+            remark = "몰수 경기"
+        elif "에이스" in remark:
+            remark = "에이스 결정전"
+        else:
+            remark = ""
+
+        # Create Match data.
+        match = Match.objects.create(
+            league=league,
+            name=name,
+            date=date,
+            map=map,
+            remark=remark,
+            match_type='one-on-one')
+
+        # Players
+        player_1, created = User.objects.get_or_create(
+            name__iexact=match_result[2],
+            defaults={
+                'name': match_result[2],
+                'most_race': match_result[3],
+            })
+        player_2, created = User.objects.get_or_create(
+            name__iexact=match_result[4],
+            defaults={
+                'name': match_result[4],
+                'most_race': match_result[5],
+            })
+
+        # Create할 때 row의 위치를 잘 따져야 한다.
+        Player.objects.create(
+            match=match,
+            user=player_1,
+            is_win=(player_1.name == match_result[7]),
+            race=match_result[3])
+        Player.objects.create(
+            match=match,
+            user=player_2,
+            is_win=(player_2.name == match_result[7]),
+            race=match_result[5])
 
 
 class Player(models.Model):
     # cannot comment this member. too hard to describe...
     match = models.ForeignKey(
         Match,
-        on_delete=models.CASCADE)
+        on_delete=models.CASCADE,
+        blank=True)
 
     # is win?
     is_win = models.BooleanField(
@@ -307,8 +421,8 @@ class Player(models.Model):
 
     # race in this match
     race = models.CharField(
-        default="",
         max_length=10,
+        default="",
         choices=race_list[:-1])
 
     class Meta:

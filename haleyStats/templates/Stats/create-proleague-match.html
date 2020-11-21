@@ -1,4 +1,5 @@
 {% extends 'Stats/base-stats.html' %} {% block content %} {% load static %} {% load bootstrap4 %}
+<script src="{% static 'Stats/jquery.formset.js' %}"></script>
 <div class="container p-3">
     <div class="h4">Create Match</div>
     <hr>
@@ -6,15 +7,27 @@
         {% csrf_token %}
         <div class="form-group row">
             <div class="col-md-10">
-                {% bootstrap_form match_form layout='horizontal' %}
+                {{ match_frame_form.as_p }}
             </div>
         </div>
         <hr>
         {{ entry_formset.management_form}}
         <div class="form-row player-form" id="form-container">
-        {% for entry_form in entry_formset %}
-            {{entry_form.as_p}}
-        {% endfor %}
+            <table>
+            {% for form in entry_formset %}
+                {% for field in form.visible_fields %}
+                <tr>
+                    <th>
+                        {{ field.label_tag }}
+                    </th>
+                    <td>
+                        {{ field.errors }}
+                        {{ field }}
+                    </td>
+                </tr>
+                {% endfor %}
+            {% endfor %}
+            </table>
         </div>
         <hr/>
         <button type="submit" class="btn btn-success">
@@ -22,4 +35,13 @@
         </button>
     </form>
 </div>
+<script type="text/javascript">
+    $('#form-container').formset({
+            addText: '+ add Match',
+            addCssClass: 'btn btn-primary',
+            deleteText: '삭제',
+            deleteCssClass: 'btn btn-light',
+            prefix: ''
+    });
+</script>
 {% endblock %}
