@@ -2,7 +2,9 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.4.0/Chart.min.js"
 ></script>
 <link rel="stylesheet" href="{% static 'User/detail.css' %}" />
-<link rel="text/javascript" href="{% static 'User/chart.js' %}" />
+<script type="text/javascript" src="{% static 'User/chart.js' %}"></script>
+
+
 <div class="profile">
     <div class="jumbotron rounded-0 text-light {{ user.most_race }}">
         <h1 class="jumbotron-heading">
@@ -20,10 +22,43 @@
     </div>
 </div>
 <hr>
+
 <div class="statistics-summary">
     <div class="h2 m-3">최근 전적 - 승률 : {{ winning_rate }}%&nbsp;{{ winning_status }}</div>
 </div>
 <div class="match-list">
+    <ul class="list-group">
+    {% for match in match_list %}
+        <li class="list-group-item">
+            <div class="d-flex justify-content-center align-items-center">
+                <div class="mr-auto text-center" id="league">
+                    <div class="h5">{{ match.league.name }}<br></div>
+                    <small>{{ match.name }}</small>
+                </div>
+                <div class="" id="result">
+                    {% for player in match.player_set.all %}
+                        <a href="{{ player.user.get_absolute_url }}"
+                           class="h3"
+                           >{{ player.user.name }}&nbsp;<span class="h4">({{ player.race }})</span>
+                        </a>
+                        {% if player.is_win %}
+                            <div class="badge badge-primary">승</div>
+                        {% else %}
+                            <div class="badge badge-danger">패</div>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+                <div class="" id="map">
+                    <a href="{{ match.map.get_absolute_url }}">{{ match.map }}</a>
+                </div>
+                <div class="ml-auto text-secondary" id="date">
+                    <small>{{ match.date }}</small>
+                </div>
+            </div>
+        </li>
+    {% endfor %}
+    </ul>
+    <!-- 
     <ul class="list-group">
             {% for match in match_list %}
             <li
@@ -51,22 +86,25 @@
                 </span>
             </li>
         {% endfor %}
+
     </ul>
+    -->
 </div>
 <hr>
-<div class="statistics m-3">
+
+<div class="statistics p-3">
     <div class="h2">
         종족별 승률
     </div>
     <div class="h4 row justify-content-center">
-        {% for race, rates in winning_rate_by_race.items %}
         <div class="col-md-4">
-            <canvas 
-                id="pieChart{{ forloop.counter }}" 
-                onclick="new_chart('pieChart{{ forloop.counter }}', {{ race }}, {{ rates }});">
-            </canvas>
+            <canvas id="pieChart"></canvas>
         </div>
-        {% endfor %}
     </div>
 </div>
+<script type="text/javascript">
+new_chart("pieChart", '{{ winning_rate_by_race.keys }}', {{ winning_rate_by_race.values }});
+{% for race, rates in winning_rate_by_race.items %}
+{% endfor %}
+</script>
 {% endblock content %}

@@ -4,7 +4,43 @@
 </div>
 <hr>
 <div class="match-list pb-3">
-    <ul class="list-group p-3">
+    <!-- 굳이 여기에 모든 전적을 보여주는 곳이 필요한가 싶다. -->
+    <ul class="list-group">
+    {% for match in page_obj %}
+        <li class="list-group-item">
+            <div class="d-flex justify-content-center align-items-center">
+                <div class="mr-auto text-center" id="league">
+                    <div class="h5">{{ match.league.name }}<br></div>
+                    <small>{{ match.name }}</small>
+                </div>
+                <div class="" id="result">
+                    {% for player in match.player_set.all %}
+                        <a href="{{ player.user.get_absolute_url }}"
+                           class="h3"
+                           >{{ player.user.name }}&nbsp;<span class="h4">({{ player.race }})</span>
+                        </a>
+                        {% if player.is_win %}
+                            <div class="badge badge-primary align-middle">승</div>
+                        {% else %}
+                            <div class="badge badge-danger">패</div>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+                <div class="" id="map">
+                    <a href="{{ match.map.get_absolute_url }}">{{ match.map }}</a>
+                </div>
+                <div class="ml-auto text-secondary" id="date">
+                    <small>{{ match.date }}</small>
+                </div>
+            </div>
+        </li>
+    {% endfor %}
+    </ul>
+
+
+
+
+    <!-- <ul class="list-group p-3">
         {% for match in page_obj %}
         <li class="list-group-item">
             <div class="d-flex justify-content-between align-items-center">
@@ -61,7 +97,7 @@
             </div>
         </li>
         {% endfor %}
-    </ul>
+    </ul> -->
     <div class="pagination">
         <span class="step-links">
             {% if page_obj.has_previous %}

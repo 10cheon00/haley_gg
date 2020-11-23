@@ -76,8 +76,6 @@ class DeleteMapView(SelectMapMixin, DeleteView):
     def get_success_url(self):
         return reverse('haley_gg:maps_list')
 
-# MapTypeViews should be write below.
-
 
 # Select a user object with a name keyword.
 class SelectUserMixin(object):
@@ -100,12 +98,13 @@ class DetailUserView(SelectUserMixin, DetailView):
 
     def get_context_data(self, *args, **kwargs):
         context = super(DetailUserView, self).get_context_data(*args, **kwargs)
-        match_list = Match.objects.filter(
-            player__user=self.object, match_type='one_on_one')
+        match_list = Match.melee.filter(
+            player__user_id=self.object.id)[:10]
         context['match_list'] = match_list
         context['winning_rate'] = self.object.get_winning_rate(
             self.object.player_set.all())
-        context['get_winning_rate_by_race'] = self.object.get_winning_rate_by_race(match_list)
+        context['winning_rate_by_race'] = self.object.get_winning_rate_by_race(
+            match_list)
         context['winning_status'] = self.object.get_winning_status()
         return context
 

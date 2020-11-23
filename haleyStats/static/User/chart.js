@@ -8,12 +8,25 @@ function new_chart(name, race, rates){
             datasets: [
                 {
                     data: [rates],
-                    backgroundColor: ['#DDDDDD'],
-                    hoverBackgroundColor: ['#999999'],
+                    backgroundColor: ['#FF8A57'],
+                    hoverBackgroundColor: ['#FFB291'],
                 },
             ],
         },
         options: {
+            plugins: {
+                datalabels: {
+                    display: true,
+                    align: 'center',
+                    anchor: 'center'
+                }
+            },
+            pieceLabel: {
+                mode:"value",
+                position:"outside",
+                fontSize: 11,
+                fontStyle: 'bold' 
+            },
             responsive: true,
         },
     });
