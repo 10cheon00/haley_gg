@@ -21,7 +21,8 @@ class User(models.Model):
     # name that same as Starcraft Nickname
     name = models.CharField(
         max_length=30,
-        default="")
+        default="",
+        unique=True)
 
     # joined date
     joined_date = models.DateField(
@@ -46,16 +47,15 @@ class User(models.Model):
         return reverse("haley_gg:users_detail", kwargs={"name": self.name})
 
     # Return win rate no matter of player's race.
-    def get_winning_rate(self, queryset):
-        if queryset:
-            match_count = queryset.count()
-            match_win_count = queryset.filter(is_win=True).count()
-            try:
-                win_rate = round(match_win_count / match_count * 100, 2)
-            except ZeroDivisionError:
-                return 0
-            return win_rate
-        return 0
+    def get_winning_rate(self):
+        queryset = self.player_set.all()
+        match_count = queryset.count()
+        match_win_count = queryset.filter(is_win=True).count()
+        try:
+            win_rate = round(match_win_count / match_count * 100, 2)
+        except ZeroDivisionError:
+            return 0
+        return win_rate
 
     # Return winning_rate by race
     def get_winning_rate_by_race(self, melee_match_list):
@@ -78,6 +78,7 @@ class User(models.Model):
             # rates of victory by races.
             # 플레이어와 연관된 매치리스트를 돌면서 연결된 상대의 종족을 읽는다.
             for match in melee_match_list:
+                # 매치마다 하고 있으니 참~ 느립니다~
                 for player in match.player_set.all():
                     if player.user != self:
                         # count by opponent race.
@@ -160,6 +161,9 @@ class Map(models.Model):
     # - P vs(T, Z)
     # () is already calculated.
     # Only works when match_type is melee.
+    #
+    # Too slow....
+    #
     def get_statistics_on_winning_rate(self):
         winning_rate_dict = {
             'T': {
@@ -174,6 +178,7 @@ class Map(models.Model):
                 'T': [0, 0], 'Z': [0, 0], 'P': [0, 0]
             },
         }
+
         # loop per matches related this map.
         for match in self.match_set.all():
             winner_race = ''
@@ -186,7 +191,8 @@ class Map(models.Model):
             # If winner's race same as loser's race, just add.
             # Same race match just have number of matches.
             winning_rate_dict[winner_race][loser_race][0] += 1
-        # So, winning_rate_dict has all data who win or lose.
+        # So, winning_rate_dict has all data who win or lose.|
+
         race_list = ['T', 'P', 'Z']
         for winner in race_list:
             for loser in race_list:
@@ -216,8 +222,9 @@ class League(models.Model):
     type = models.CharField(
         max_length=20,
         choices=(
-            ("proleague", "프로리그"),
-            ("starleague", "스타리그"),
+            ("pro_league", "프로리그"),
+            ("star_league", "스타리그"),
+            ("event_league", "이벤트리그"),
         ),
         default="")
 
@@ -241,7 +248,7 @@ class Match(models.Model):
     # Round, dual tournament or something like that. Seems like game title
     # ex. Round 1, 16강 A조 ... etc
     name = models.CharField(
-        max_length=50,
+        max_length=100,
         default="",
         verbose_name="매치 제목")
 
@@ -314,7 +321,6 @@ class Match(models.Model):
         melee_sheet = doc.worksheet('개인전적Data')
         match_result_list = melee_sheet.get_all_values()
         match_length = len(match_result_list)
-
         # loops from last of exist data to last of new data.
         for i in range(Match.objects.all().count() * 2 + 1, match_length, 2):
             match_result = match_result_list[i]
@@ -334,22 +340,48 @@ class Match(models.Model):
             date = datetime.datetime.strptime(date, '%Y-%m-%d')
 
             # League
-            name = match_result[1]
-            index = name.find('HSL')
-            if index < 0:
-                index = name.find('HPL')
-                league_type = "proleague"
+            name_list = match_result[1].lower().split()
+            index = name_list.index('hsl') if 'hsl' in name_list else None
+            if index is not None:
+                # Starleague
+                league_type = 'star_league'
             else:
-                league_type = "starleague"
+                # Proleague
+                index = name_list.index('hpl') if 'hpl' in name_list else None
+                if index is not None:
+                    league_type = 'pro_league'
+                else:
+                    # If league is not proleague or starleague,
+                    # add new league.
+
+                    # 종족최강전
+                    index = name_list.index('종족최강전') if '종족최강전' in name_list else None
+                    if index is not None:
+                        league_type = 'event_league'
+                        index -= 1
+                    # elif:
+                    else:
+                        league_type = 'Unknown_League'
+            league_name = []
+            if league_type != 'Unknown_League':
+                for i in range(0, index + 2):
+                    if i < index:
+                        league_name.append(name_list[i])
+                    else:
+                        league_name.append(name_list[i].upper())
+                league_name = ' '.join(league_name)
+            else:
+                league_name = "Unknown League"
+
             league, created = League.objects.get_or_create(
-                name__iexact=name[0:index+6],
+                name__iexact=league_name,
                 defaults={
-                    'name': name[0:index+6],
+                    'name': league_name,
                     'type': league_type,
                 })
 
             # name
-            name = name[index+7:]
+            name = ' '.join(name_list[index+2:])
 
             # map
             map, created = Map.objects.get_or_create(
