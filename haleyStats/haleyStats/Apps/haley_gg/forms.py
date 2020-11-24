@@ -1,5 +1,3 @@
-import datetime
-
 from django import forms
 
 from .models import User
@@ -17,7 +15,8 @@ class CreateUserForm(forms.ModelForm):
             'most_race'
         ]
         widgets = {
-            'joined_date': forms.NumberInput(attrs={'type': 'date'}),
+            'joined_date': forms.NumberInput(
+                attrs={'type': 'date'}),
         }
 
     # Check that the user name is already exist.
@@ -33,8 +32,8 @@ class CreateUserForm(forms.ModelForm):
 
 
 # Update User model. Provide all field.
-class UpdateUserForm(CreateUserForm):
-    class Meta(CreateUserForm.Meta):
+class UpdateUserForm(forms.ModelForm):
+    class Meta:
         # Show all field in User model.
         model = User
         fields = [
@@ -44,8 +43,19 @@ class UpdateUserForm(CreateUserForm):
             'career'
         ]
         widgets = {
-            'joined-date': forms.NumberInput(attrs={'type': 'date'}),
+            'joined_date': forms.NumberInput(
+                attrs={'type': 'date'}),
         }
+
+    def clean_name(self):
+        name = self.cleaned_data['name']
+        if User.objects.filter(
+            name__iexact=name
+        ):
+            error_msg = u"Already exist user."
+            self.add_error('name', error_msg)
+        # 자기 이름인데 대소문자만 변경하는 경우라면...?
+        return name
 
 
 # Map form.
