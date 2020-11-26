@@ -1,4 +1,5 @@
 from django import forms
+from django.core.exceptions import ObjectDoesNotExist
 
 from .models import User
 from .models import Map
@@ -22,12 +23,16 @@ class CreateUserForm(forms.ModelForm):
     # Check that the user name is already exist.
     def clean_name(self):
         name = self.cleaned_data['name']
-        if User.objects.filter(name__iexact=name):
-            error_msg = u"Already exist user name."
-            self.add_error('name', error_msg)
         if name == 'new':
             error_msg = u"This name cannot allowed."
             self.add_error('name', error_msg)
+
+        try:
+            if User.objects.get(name__iexact=name):
+                error_msg = u"Already exist user name."
+                self.add_error('name', error_msg)
+        except ObjectDoesNotExist:
+            pass
         return name
 
 
@@ -49,17 +54,25 @@ class UpdateUserForm(forms.ModelForm):
 
     def clean_name(self):
         name = self.cleaned_data['name']
-        if User.objects.filter(
-            name__iexact=name
-        ):
-            error_msg = u"Already exist user."
+
+        if name == 'new':
+            error_msg = u"This name cannot allowed."
             self.add_error('name', error_msg)
-        # 자기 이름인데 대소문자만 변경하는 경우라면...?
+
+        try:
+            exist_user = User.objects.get(name__iexact=name)
+            if exist_user:
+                # 자기 이름인데 대소문자만 변경하는 경우를 검사한다.
+                if exist_user.name.lower() != name.lower():
+                    error_msg = u"Already exist user."
+                    self.add_error('name', error_msg)
+        except ObjectDoesNotExist:
+            pass
         return name
 
 
 # Map form.
-class MapForm(forms.ModelForm):
+class CreateMapForm(forms.ModelForm):
     permissible_map_extensions_list = (
         '.scm',
         '.scx',
@@ -77,19 +90,23 @@ class MapForm(forms.ModelForm):
         fields = ('name', 'file', 'image')
 
     def __init__(self, *args, **kwargs):
-        super(MapForm, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.fields['file'].required = True
         self.fields['image'].required = True
 
     # Check that the map name is already exist.
     def clean_name(self):
         name = self.cleaned_data['name']
-        if Map.objects.filter(name__iexact=name):
-            error_msg = u"Already exist map name."
-            self.add_error('name', error_msg)
         if name == 'new':
             error_msg = u"This name cannot allowed."
             self.add_error('name', error_msg)
+
+        try:
+            if Map.objects.get(name__iexact=name):
+                error_msg = u"Already exist map name."
+                self.add_error('name', error_msg)
+        except ObjectDoesNotExist:
+            pass
         return name
 
     # Check file extension.
@@ -117,6 +134,29 @@ class MapForm(forms.ModelForm):
                 error_msg = u"This file isn't an image file. Can not allowed."
                 self.add_error('image', error_msg)
         return image_file
+
+
+class UpdateMapForm(CreateMapForm):
+    class Meta(CreateMapForm.Meta):
+        pass
+
+    def clean_name(self):
+        name = self.cleaned_data['name']
+
+        if name == 'new':
+            error_msg = u"This name cannot allowed."
+            self.add_error('name', error_msg)
+
+        try:
+            exist_user = User.objects.get(name__iexact=name)
+            if exist_user:
+                # 자기 이름인데 대소문자만 변경하는 경우를 검사한다.
+                if exist_user.name.lower() != name.lower():
+                    error_msg = u"Already exist user."
+                    self.add_error('name', error_msg)
+        except ObjectDoesNotExist:
+            pass
+        return name
 
 
 class MatchSheetForm(forms.Form):
