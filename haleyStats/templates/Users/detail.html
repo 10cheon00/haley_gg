@@ -26,6 +26,7 @@
 <div class="statistics-summary">
     <div class="h2 m-3">최근 전적 - 승률 : {{ winning_rate }}%&nbsp;{{ winning_status }}</div>
 </div>
+
 <div class="match-list">
     <ul class="list-group">
     {% for match in match_list %}
@@ -39,15 +40,20 @@
                     {% for player in match.player_set.all %}
                         <a href="{{ player.user.get_absolute_url }}"
                            class="h3"
-                           >{{ player.user.name }}&nbsp;<span class="h4">({{ player.race }})</span>
+                           >{{ player.user.name }}&nbsp;                            
+                            <span class="h4">
+                                ({{ player.race }})
+                            </span>
                         </a>
                         {% if player.is_win %}
                             <div class="badge badge-primary">승</div>
                         {% else %}
                             <div class="badge badge-danger">패</div>
                         {% endif %}
+                        <br/>
                     {% endfor %}
                 </div>
+                &nbsp;
                 <div class="" id="map">
                     <a href="{{ match.map.get_absolute_url }}">{{ match.map }}</a>
                 </div>

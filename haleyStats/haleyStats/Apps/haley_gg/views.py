@@ -1,19 +1,18 @@
 # haley_gg/views.py
 from django.shortcuts import get_object_or_404
-from django.views.generic import (
-    ListView,
-    CreateView,
-    DetailView,
-    UpdateView,
-    DeleteView,
-    FormView
-)
+from django.views.generic import ListView
+from django.views.generic import CreateView
+from django.views.generic import DetailView
+from django.views.generic import UpdateView
+from django.views.generic import DeleteView
+from django.views.generic import FormView
 from django.urls import reverse
 
 from .models import User
 from .models import Map
 from .models import Match
-from .forms import MapForm
+from .forms import CreateMapForm
+from .forms import UpdateMapForm
 from .forms import CreateUserForm
 from .forms import UpdateUserForm
 from .forms import MatchSheetForm
@@ -46,7 +45,7 @@ class MapListView(ListView):
 class CreateMapView(CreateView):
     template_name = 'Pattern/create.html'
     model = Map
-    form_class = MapForm
+    form_class = CreateMapForm
 
 
 # Show details of a map object.
@@ -57,6 +56,7 @@ class DetailMapView(SelectMapMixin, DetailView):
 
     def get_context_data(self, *args, **kwargs):
         context = super(DetailMapView, self).get_context_data(*args, **kwargs)
+        # only works on melee maps
         context['winning_rate_dict'] = self.object.get_statistics_on_winning_rate()
         return context
 
@@ -65,7 +65,7 @@ class DetailMapView(SelectMapMixin, DetailView):
 class UpdateMapView(SelectMapMixin, UpdateView):
     template_name = 'Pattern/update.html'
     model = Map
-    form_class = MapForm
+    form_class = UpdateMapForm
 
 
 # Delete a map object.
@@ -101,8 +101,7 @@ class DetailUserView(SelectUserMixin, DetailView):
         match_list = Match.melee.filter(
             player__user_id=self.object.id)[:10]
         context['match_list'] = match_list
-        context['winning_rate'] = self.object.get_winning_rate(
-            self.object.player_set.all())
+        context['winning_rate'] = self.object.get_winning_rate()
         context['winning_rate_by_race'] = self.object.get_winning_rate_by_race(
             match_list)
         context['winning_status'] = self.object.get_winning_status()

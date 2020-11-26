@@ -1,13 +1,11 @@
 # haley_gg/models.py
-
-import datetime
-
 from django.db import models
 from django.utils import timezone
 from django.urls import reverse
 
 from .manager import MeleeMatchManager
 from .manager import TeamMatchManager
+from .utils import get_match_data_from_match_list
 
 race_list = (
     ('T', 'Terran'),
@@ -155,11 +153,6 @@ class Map(models.Model):
         self.save()
 
     # Calculate statistics on victory by race.
-    # statistics on victory to be calculated.
-    # - T vsZ, P
-    # - Z vsP, (T)
-    # - P vs(T, Z)
-    # () is already calculated.
     # Only works when match_type is melee.
     #
     # Too slow....
@@ -180,7 +173,7 @@ class Map(models.Model):
         }
 
         # loop per matches related this map.
-        for match in self.match_set.all():
+        for match in self.match_set.filter(match_type='one_on_one'):
             winner_race = ''
             loser_race = ''
             for player in match.player_set.all():
@@ -318,72 +311,39 @@ class Match(models.Model):
     def create_data_from_sheet(self, doc):
         # Google Spreadsheet warn you 'read requests per user per 100 seconds'
         # So i bring all data at once.
+
+        #
+        # Managing melee data.
+        #
         melee_sheet = doc.worksheet('개인전적Data')
         match_result_list = melee_sheet.get_all_values()
         match_length = len(match_result_list)
-        # loops from last of exist data to last of new data.
-        for i in range(Match.objects.all().count() * 2 + 1, match_length, 2):
+        # Loops from last of exist data to last of new data.
+        # Only counts if match type isn't top and bottom.
+        for i in range(
+            Match.objects.filter(match_type='one_on_one').count() * 2 + 1,
+            match_length,
+            2
+        ):
             match_result = match_result_list[i]
+            match_data_dict = get_match_data_from_match_list(match_result)
 
-            # if match_result's item is empty data,
-            # fill it with 'Unknown Data'.
-            for index, value in enumerate(match_result):
-                if value == '':
-                    match_result[index] = "Unknown data."
-
-            # match date
-            date = match_result[0]
-            date = date.split('.')
-            if len(date[0]) < 4:
-                date[0] = f'20{date[0]}'
-            date = '-'.join(date)
-            date = datetime.datetime.strptime(date, '%Y-%m-%d')
+            # date
+            date = match_data_dict['date']
 
             # League
-            name_list = match_result[1].lower().split()
-            index = name_list.index('hsl') if 'hsl' in name_list else None
-            if index is not None:
-                # Starleague
-                league_type = 'star_league'
-            else:
-                # Proleague
-                index = name_list.index('hpl') if 'hpl' in name_list else None
-                if index is not None:
-                    league_type = 'pro_league'
-                else:
-                    # If league is not proleague or starleague,
-                    # add new league.
-
-                    # 종족최강전
-                    index = name_list.index('종족최강전') if '종족최강전' in name_list else None
-                    if index is not None:
-                        league_type = 'event_league'
-                        index -= 1
-                    # elif:
-                    else:
-                        league_type = 'Unknown_League'
-            league_name = []
-            if league_type != 'Unknown_League':
-                for i in range(0, index + 2):
-                    if i < index:
-                        league_name.append(name_list[i])
-                    else:
-                        league_name.append(name_list[i].upper())
-                league_name = ' '.join(league_name)
-            else:
-                league_name = "Unknown League"
-
+            league_name = match_data_dict['league_name']
+            league_type = match_data_dict['league_type']
             league, created = League.objects.get_or_create(
                 name__iexact=league_name,
                 defaults={
                     'name': league_name,
                     'type': league_type,
                 })
-
             # name
-            name = ' '.join(name_list[index+2:])
+            name = match_data_dict['name']
 
-            # map
+            # Map
             map, created = Map.objects.get_or_create(
                 name=match_result[6],
                 defaults={
@@ -441,6 +401,90 @@ class Match(models.Model):
                 user=player_2,
                 is_win=(match_result[4].lower() == match_result[7].lower()),
                 race=player_2_race)
+
+        #
+        # Managing top and bottom data.
+        #
+        teamplay_sheet = doc.worksheet('팀플전적Data')
+        match_result_list = teamplay_sheet.get_all_values()
+        match_length = len(match_result_list)
+        # Only counts if match type isn't top and bottom.
+        for i in range(
+            Match.objects.filter(match_type='top_and_bottom').count() * 6 + 1,
+            match_length,
+            6
+        ):
+            match_result = match_result_list[i]
+            match_data_dict = get_match_data_from_match_list(match_result)
+
+            # date
+            date = match_data_dict['date']
+
+            # League
+            league_name = match_data_dict['league_name']
+            league_type = match_data_dict['league_type']
+            league, created = League.objects.get_or_create(
+                name__iexact=league_name,
+                defaults={
+                    'name': league_name,
+                    'type': league_type,
+                })
+            # name
+            name = match_data_dict['name']
+
+            # Map
+            map, created = Map.objects.get_or_create(
+                name=match_result[8],
+                defaults={
+                })
+
+            # remark
+            remark = ""
+            try:
+                # if match is abstention...
+                remark = match_result[14]
+            except IndexError:
+                remark = ""
+
+            if "기권" in remark:
+                remark = "기권 경기"
+            elif "몰수" in remark:
+                remark = "몰수 경기"
+            elif "에이스" in remark:
+                remark = "에이스 결정전"
+            else:
+                remark = ""
+
+            # Create Match data.
+            match = Match.objects.create(
+                league=league,
+                name=name,
+                date=date,
+                map=map,
+                remark=remark,
+                match_type='top_and_bottom')
+
+            # Players
+            for i in range(2, 8):
+                # race does not matter
+                player_race = ''
+                if i < 5:
+                    is_win = match_result[9] in match_result[2:5]
+                else:
+                    is_win = match_result[9] in match_result[5:8]
+
+                player, created = User.objects.get_or_create(
+                    name__iexact=match_result[i],
+                    defaults={
+                        'name': match_result[i],
+                        'most_race': player_race,
+                    })
+
+                Player.objects.create(
+                    match=match,
+                    user=player,
+                    is_win=is_win,
+                    race=player_race)
 
 
 class Player(models.Model):

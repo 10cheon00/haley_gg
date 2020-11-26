@@ -17,13 +17,19 @@
                     {% for player in match.player_set.all %}
                         <a href="{{ player.user.get_absolute_url }}"
                            class="h3"
-                           >{{ player.user.name }}&nbsp;<span class="h4">({{ player.race }})</span>
+                           >{{ player.user.name }}
+                            {% if player.race %}
+                                <span class="h4">({{ player.race }})</span>
+                            {% endif %}
+                            
                         </a>
                         {% if player.is_win %}
                             <div class="badge badge-primary align-middle">승</div>
                         {% else %}
                             <div class="badge badge-danger">패</div>
                         {% endif %}
+                        &nbsp;
+                        <br/>
                     {% endfor %}
                 </div>
                 <div class="" id="map">
