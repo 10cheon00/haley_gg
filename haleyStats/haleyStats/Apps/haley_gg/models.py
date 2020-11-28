@@ -2,6 +2,7 @@
 from django.db import models
 from django.utils import timezone
 from django.urls import reverse
+from django.db.models import Q
 
 from .manager import MeleeMatchManager
 from .manager import TeamMatchManager
@@ -56,43 +57,53 @@ class User(models.Model):
         return win_rate
 
     # Return winning_rate by race
-    def get_winning_rate_by_race(self, melee_match_list):
-        rates = {
-            'T': 0,
-            'P': 0,
-            'Z': 0,
+    def get_winning_rate_by_race(self):
+        rate_dict = {
+            'T': [0,   # victory_count
+                  0,   # matches_count
+                  0],  # rate
+            'P': [0, 0, 0],
+            'Z': [0, 0, 0],
         }
-        if melee_match_list:
-            victory_count_dict = {
-                'T': 0,
-                'P': 0,
-                'Z': 0,
-            }
-            match_count_dict = {
-                'T': 0,
-                'P': 0,
-                'Z': 0,
-            }
-            # rates of victory by races.
-            # 플레이어와 연관된 매치리스트를 돌면서 연결된 상대의 종족을 읽는다.
-            for match in melee_match_list:
-                # 매치마다 하고 있으니 참~ 느립니다~
-                for player in match.player_set.all():
-                    if player.user != self:
-                        # count by opponent race.
-                        match_count_dict[player.race] += 1
-                        # if player wins, count by opponent race.
-                        if not player.is_win:
-                            victory_count_dict[player.race] += 1
-            for key in rates.keys():
-                try:
-                    # Get player_s race vs Z,P winning_rate.
-                    rates[key] = round(
-                        victory_count_dict[key] / match_count_dict[key] * 100,
-                        2)
-                except ZeroDivisionError:
-                    rates[key] = 0
-        return rates
+        match_list = Player.objects.select_related(
+            'match',
+            'user',
+        ).filter(
+            Q(match__match_type='one_on_one')
+        ).values(
+            'match_id',
+            'user_id',
+            'is_win',
+            'race',
+            'id',
+        )
+
+        # 1. 모든 매치에 연결된 플레이어의 데이터를 갖고오게 되었다.
+        # 2. 해당 유저와 붙은 유저의 전적을 골라내야한다.
+        #    전적 추가할 때 매치에 연결된 유저들은 붙어있기 때문에 인덱싱만 잘 조절하면 된다.
+        for index, match_dict in enumerate(match_list):
+            if match_dict['user_id'] != self.id:
+                continue
+            if match_list[index+1]['match_id'] == match_dict['match_id']:
+                opponent_index = index + 1
+            else:
+                opponent_index = index - 1
+            opponent_race = match_list[opponent_index]['race']
+            if match_dict['is_win']:
+                rate_dict[opponent_race][0] += 1
+            rate_dict[opponent_race][1] += 1
+
+        for key in rate_dict.keys():
+            try:
+                # Get player's race vs Z,P winning_rate.
+                victories = rate_dict[key][0]
+                matches = rate_dict[key][1]
+                rate_dict[key][2] = round(
+                    victories / matches * 100,
+                    2)
+            except ZeroDivisionError:
+                rate_dict[key][2] = 0
+        return rate_dict
 
     # Returns the winning status.
     def get_winning_status(self):
@@ -172,19 +183,43 @@ class Map(models.Model):
             },
         }
 
-        # loop per matches related this map.
-        for match in self.match_set.filter(match_type='one_on_one'):
+        # Only hit db once, get all data.
+        match_result_list = Player.objects.select_related(
+            'match',
+            'map'
+        ).values_list(
+            'match__map_id',
+            'match__match_type',
+            'match_id',
+            'is_win',
+            'race',
+        )
+        match_dict = {}
+        for match_result in match_result_list:
+            if match_result[0] != self.id or match_result[1] != 'one_on_one':
+                continue
+            else:
+                key = str(match_result[2])
+                data = match_dict.get(key)
+                if data is None:
+                    data = []
+                is_win = match_result[3]
+                race = match_result[4]
+                data.append((is_win, race))
+                match_dict[key] = data
+
+        for values in match_dict.values():
             winner_race = ''
             loser_race = ''
-            for player in match.player_set.all():
-                if player.is_win:
-                    winner_race = player.race
-                else:
-                    loser_race = player.race
-            # If winner's race same as loser's race, just add.
-            # Same race match just have number of matches.
+            if values[0][0] is True:
+                winner_race = values[0][1]
+            else:
+                loser_race = values[0][1]
+            if values[1][0] is True:
+                winner_race = values[1][1]
+            else:
+                loser_race = values[1][1]
             winning_rate_dict[winner_race][loser_race][0] += 1
-        # So, winning_rate_dict has all data who win or lose.|
 
         race_list = ['T', 'P', 'Z']
         for winner in race_list:

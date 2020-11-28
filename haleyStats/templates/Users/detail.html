@@ -64,53 +64,27 @@
         </li>
     {% endfor %}
     </ul>
-    <!-- 
-    <ul class="list-group">
-            {% for match in match_list %}
-            <li
-                class="list-group-item 
-                    {% for player in match.player_set.all %}
-                        {% if player.user.name == user.name %}
-                            {% if player.is_win %}
-                                list-group-item-primary
-                            {% else %}
-                                list-group-item-danger
-                            {% endif %}
-                        {% endif %}
-                    {% endfor %}"
-            >
-                <span class="h5"
-                    >{{ match.league_name }}&nbsp;{{ match.name }}&nbsp;{{ match.set }}&nbsp;경기
-                </span>
-                <small class="text-secondary ml-3 mr-3">{{ match.date }}</small>
-                <span class="h4">
-                    {% for player in match.player_set.all %} 
-                        <a href="{{ player.user.get_absolute_url }}"
-                        >{{ player.user.name }}&nbsp;<span class="h6 text-secondary"
-                            >({{ player.race }})</span></a>
-                    {% endfor %}
-                </span>
-            </li>
-        {% endfor %}
-
-    </ul>
-    -->
 </div>
 <hr>
 
 <div class="statistics p-3">
     <div class="h2">
-        종족별 승률
+        통산 전적 승률
     </div>
     <div class="h4 row justify-content-center">
         <div class="col-md-4">
-            <canvas id="pieChart"></canvas>
+        {% for key, value in winning_rate_by_race.items %}
+            <!-- <canvas id="pieChart"></canvas> -->
+            <div class="">
+                {{ key }} : {{ value }}
+            </div>
+        {% endfor %}
         </div>
     </div>
 </div>
 <script type="text/javascript">
-new_chart("pieChart", '{{ winning_rate_by_race.keys }}', {{ winning_rate_by_race.values }});
-{% for race, rates in winning_rate_by_race.items %}
-{% endfor %}
+// new_chart("pieChart", '{{ winning_rate_by_race.keys }}', {{ winning_rate_by_race.values }});
+// {% for race, rates in winning_rate_by_race.items %}
+// {% endfor %}
 </script>
 {% endblock content %}

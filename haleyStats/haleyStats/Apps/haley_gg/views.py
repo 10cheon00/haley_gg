@@ -102,8 +102,7 @@ class DetailUserView(SelectUserMixin, DetailView):
             player__user_id=self.object.id)[:10]
         context['match_list'] = match_list
         context['winning_rate'] = self.object.get_winning_rate()
-        context['winning_rate_by_race'] = self.object.get_winning_rate_by_race(
-            match_list)
+        context['winning_rate_by_race'] = self.object.get_winning_rate_by_race()
         context['winning_status'] = self.object.get_winning_status()
         return context
 
