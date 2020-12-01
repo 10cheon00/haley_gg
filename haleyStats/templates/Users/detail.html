@@ -37,6 +37,8 @@
                     <small>{{ match.name }}</small>
                 </div>
                 <div class="" id="result">
+                    <!-- 이 코드도 player_set을 계속 호출하니 딜레이가 심하다.
+                    나중에 select_related로 값만 뽑아 넘겨주면 되겠다. -->
                     {% for player in match.player_set.all %}
                         <a href="{{ player.user.get_absolute_url }}"
                            class="h3"

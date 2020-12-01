@@ -2,7 +2,6 @@
 from django.db import models
 from django.utils import timezone
 from django.urls import reverse
-from django.db.models import Q
 
 from .manager import MeleeMatchManager
 from .manager import TeamMatchManager
@@ -10,13 +9,23 @@ from .utils import get_match_data_from_match_list
 
 race_list = (
     ('T', 'Terran'),
-    ('P', 'Protoss'),
     ('Z', 'Zerg'),
+    ('P', 'Protoss'),
     ('R', 'Random')
 )
 
 
-class User(models.Model):
+class RelatedPlayerQuerySetMixin(object):
+    def get_melee_queryset(self, *args):
+        return Player.objects.select_related(
+            'match',
+            'user',
+        ).filter(
+            match__match_type='one_on_one'
+        ).values(*args)
+
+
+class User(RelatedPlayerQuerySetMixin, models.Model):
     # name that same as Starcraft Nickname
     name = models.CharField(
         max_length=30,
@@ -49,9 +58,9 @@ class User(models.Model):
     def get_winning_rate(self):
         queryset = self.player_set.all()
         match_count = queryset.count()
-        match_win_count = queryset.filter(is_win=True).count()
+        victory_count = queryset.filter(is_win=True).count()
         try:
-            win_rate = round(match_win_count / match_count * 100, 2)
+            win_rate = round(victory_count / match_count * 100, 2)
         except ZeroDivisionError:
             return 0
         return win_rate
@@ -62,20 +71,14 @@ class User(models.Model):
             'T': [0,   # victory_count
                   0,   # matches_count
                   0],  # rate
-            'P': [0, 0, 0],
             'Z': [0, 0, 0],
+            'P': [0, 0, 0],
         }
-        match_list = Player.objects.select_related(
-            'match',
-            'user',
-        ).filter(
-            Q(match__match_type='one_on_one')
-        ).values(
+        match_list = self.get_melee_queryset(
             'match_id',
             'user_id',
             'is_win',
             'race',
-            'id',
         )
 
         # 1. 모든 매치에 연결된 플레이어의 데이터를 갖고오게 되었다.
@@ -89,6 +92,7 @@ class User(models.Model):
             else:
                 opponent_index = index - 1
             opponent_race = match_list[opponent_index]['race']
+
             if match_dict['is_win']:
                 rate_dict[opponent_race][0] += 1
             rate_dict[opponent_race][1] += 1
@@ -127,6 +131,65 @@ class User(models.Model):
         else:
             string[1] = '연패'
         return ''.join(string)
+
+    def versus(self, opponent_name):
+        opponent = User.objects.get(name__iexact=opponent_name)
+        match_list = self.get_melee_queryset(
+            'match_id',
+            'user_id',
+            'is_win',
+            'race',
+            'id'
+        )
+        # 승, 패를 세는게 아니라 관련된 매치 리스트를 넘기는게 맞는 것 같다.
+        # 그래서 player queryset을 넘기는게 맞는 것 같다.
+
+        id_list = []
+        win_count = 0
+        lose_count = 0
+        total_count = 0
+        for index, match_dict in enumerate(match_list):
+            if match_dict['user_id'] != self.id:
+                continue
+            # find opponent index
+            if match_list[index+1]['match_id'] == match_dict['match_id']:
+                opponent_index = index + 1
+            else:
+                opponent_index = index - 1
+            # continue if opponent is not same given parameter.
+            if match_list[opponent_index]['user_id'] != opponent.id:
+                continue
+
+            # append player index when match with opponent.
+            id_list.append(match_dict['id'])
+            id_list.append(match_list[opponent_index]['id'])
+
+            total_count += 1
+            if match_dict['is_win']:
+                win_count += 1
+            else:
+                lose_count += 1
+        player_queryset = Player.objects.select_related(
+            'match',
+            'user'
+        ).filter(
+            id__in=id_list
+        ).values(
+            'match__league__name',
+            'match__name',
+            'match__map__name',
+            'match__remark',
+            'user__name',
+            'is_win',
+            'race',
+        )
+        compare_dict = {
+            'player_queryset': player_queryset,
+            'total_count': total_count,
+            'win_count': win_count,
+            'lose_count': lose_count,
+        }
+        return compare_dict
 
 
 class Map(models.Model):
@@ -315,6 +378,7 @@ class Match(models.Model):
         ),
         default="")
 
+    # Managers
     objects = models.Manager()
     melee = MeleeMatchManager()
     team = TeamMatchManager()
@@ -323,6 +387,7 @@ class Match(models.Model):
         ordering = [
             '-date',
             '-name',
+            '-id',
         ]
 
     def __str__(self):
@@ -355,20 +420,26 @@ class Match(models.Model):
         match_length = len(match_result_list)
         # Loops from last of exist data to last of new data.
         # Only counts if match type isn't top and bottom.
+
+        remark_dict = {
+            '기권': '기권 경기',
+            '몰수': '몰수 경기',
+            '에이스': '에이스 결정전',
+        }
         for i in range(
-            Match.objects.filter(match_type='one_on_one').count() * 2 + 1,
+            Match.melee.count() * 2 + 1,
             match_length,
             2
         ):
             match_result = match_result_list[i]
-            match_data_dict = get_match_data_from_match_list(match_result)
+            match_info_dict = get_match_data_from_match_list(match_result)
 
             # date
-            date = match_data_dict['date']
+            date = match_info_dict['date']
 
             # League
-            league_name = match_data_dict['league_name']
-            league_type = match_data_dict['league_type']
+            league_name = match_info_dict['league_name']
+            league_type = match_info_dict['league_type']
             league, created = League.objects.get_or_create(
                 name__iexact=league_name,
                 defaults={
@@ -376,7 +447,7 @@ class Match(models.Model):
                     'type': league_type,
                 })
             # name
-            name = match_data_dict['name']
+            name = match_info_dict['name']
 
             # Map
             map, created = Map.objects.get_or_create(
@@ -392,12 +463,8 @@ class Match(models.Model):
             except IndexError:
                 remark = ""
 
-            if "기권" in remark:
-                remark = "기권 경기"
-            elif "몰수" in remark:
-                remark = "몰수 경기"
-            elif "에이스" in remark:
-                remark = "에이스 결정전"
+            if remark in remark_dict:
+                remark = remark_dict[remark]
             else:
                 remark = ""
 
@@ -411,31 +478,44 @@ class Match(models.Model):
                 match_type='one_on_one')
 
             # Players
+            player_1_name = match_result[2]
             player_1_race = match_result[3].upper()
+            player_2_name = match_result[4]
             player_2_race = match_result[5].upper()
             player_1, created = User.objects.get_or_create(
-                name__iexact=match_result[2],
+                name__iexact=player_1_name,
                 defaults={
-                    'name': match_result[2],
+                    'name': player_1_name,
                     'most_race': player_1_race,
                 })
             player_2, created = User.objects.get_or_create(
-                name__iexact=match_result[4],
+                name__iexact=player_2_name,
                 defaults={
-                    'name': match_result[4],
+                    'name': player_2_name,
                     'most_race': player_2_race,
                 })
+            if match_result[7].lower() == player_1_name.lower():
+                target_data = [player_1,        # winner
+                               player_1_race,
+                               player_2,        # loser
+                               player_2_race]
+            else:
+                target_data = [player_2,
+                               player_2_race,
+                               player_1,
+                               player_1_race]
+            is_win = True if match_result[8] == '승' else False
 
             Player.objects.create(
                 match=match,
-                user=player_1,
-                is_win=(match_result[2].lower() == match_result[7].lower()),
-                race=player_1_race)
+                user=target_data[0],
+                is_win=is_win,
+                race=target_data[1])
             Player.objects.create(
                 match=match,
-                user=player_2,
-                is_win=(match_result[4].lower() == match_result[7].lower()),
-                race=player_2_race)
+                user=target_data[2],
+                is_win=False if is_win else True,
+                race=target_data[3])
 
         #
         # Managing top and bottom data.
@@ -445,19 +525,19 @@ class Match(models.Model):
         match_length = len(match_result_list)
         # Only counts if match type isn't top and bottom.
         for i in range(
-            Match.objects.filter(match_type='top_and_bottom').count() * 6 + 1,
+            Match.team.count() * 6 + 1,
             match_length,
             6
         ):
             match_result = match_result_list[i]
-            match_data_dict = get_match_data_from_match_list(match_result)
+            match_info_dict = get_match_data_from_match_list(match_result)
 
             # date
-            date = match_data_dict['date']
+            date = match_info_dict['date']
 
             # League
-            league_name = match_data_dict['league_name']
-            league_type = match_data_dict['league_type']
+            league_name = match_info_dict['league_name']
+            league_type = match_info_dict['league_type']
             league, created = League.objects.get_or_create(
                 name__iexact=league_name,
                 defaults={
@@ -465,7 +545,7 @@ class Match(models.Model):
                     'type': league_type,
                 })
             # name
-            name = match_data_dict['name']
+            name = match_info_dict['name']
 
             # Map
             map, created = Map.objects.get_or_create(
@@ -481,12 +561,8 @@ class Match(models.Model):
             except IndexError:
                 remark = ""
 
-            if "기권" in remark:
-                remark = "기권 경기"
-            elif "몰수" in remark:
-                remark = "몰수 경기"
-            elif "에이스" in remark:
-                remark = "에이스 결정전"
+            if remark in remark_dict:
+                remark = remark_dict[remark]
             else:
                 remark = ""
 

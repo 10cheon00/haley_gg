@@ -54,3 +54,10 @@ urlpatterns += [
          views.MatchLoadSheetView.as_view(),
          name="match_load_data"),
 ]
+
+# compare.urls
+urlpatterns += [
+    path('compare/',
+         views.CompareView.as_view(),
+         name="compare"),
+]

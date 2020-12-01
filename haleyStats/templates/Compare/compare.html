@@ -1,0 +1,30 @@
+{% extends 'Compare/base-compare.html' %}
+{% block content %}
+<div class="p-3">
+    <form method="GET">
+        {{ compare_form.as_p }}
+        <button type="submit" class="btn btn-primary">
+            Compare
+        </button>
+    </form>
+</div>
+<hr>
+<div class="" id="compare-data">
+    <div class="jumbotron">
+        <div class="h3">
+            승&nbsp;:&nbsp;{{ win_count }},&nbsp;패&nbsp;:&nbsp;{{ lose_count }}
+        </div>
+    </div>
+    <ul class="list-group">
+        {% for data in player_queryset %}
+        <li class="list-group-item">
+            {{ forloop.counter }}
+            {% for value in data.values %}
+                {{ value }}
+            {% endfor %}
+            <br>
+        </li>
+        {% endfor %}
+    </ul>
+</div>
+{% endblock content %}

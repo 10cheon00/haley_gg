@@ -75,7 +75,6 @@ def get_match_data_from_match_list(match_result):
     else:
         league_name = 'Unknown League'
 
-
     # name
     name = ' '.join(name_list[index+2:])
 
@@ -84,3 +83,4 @@ def get_match_data_from_match_list(match_result):
     match_data_dict['league_type'] = league_type
     match_data_dict['name'] = name
     return match_data_dict
+

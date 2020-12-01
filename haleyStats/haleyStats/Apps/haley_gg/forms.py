@@ -5,6 +5,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from .models import User
 from .models import Map
 from .validator import load_document
+from .validator import search_user
 
 
 # Create User model but not provide 'career' field.
@@ -164,3 +165,30 @@ class MatchSheetForm(forms.Form):
     document_url = forms.URLField(
         label="데이터 스프레드시트 URL",
         validators=[load_document])
+
+
+class CompareForm(forms.Form):
+    user_1 = forms.CharField(
+        label="유저명",
+        validators=[search_user],
+        required=True)
+
+    user_2 = forms.CharField(
+        label="유저명",
+        validators=[search_user],
+        required=True)
+
+    map_name = forms.CharField(
+        label="맵",
+        required=False)
+
+    def clean_map(self):
+        map_name = self.cleaned_data['map_name']
+        if map_name == "":
+            return map_name
+        try:
+            Map.objects.get(name__iexact=map_name)
+        except ObjectDoesNotExist:
+            error_msg = u"This map is not exist."
+            self.add_error('map', error_msg)
+        return map_name

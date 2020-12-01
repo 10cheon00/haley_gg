@@ -1,11 +1,13 @@
 # haley_gg/views.py
 from django.shortcuts import get_object_or_404
+from django.shortcuts import render
+from django.views.generic import View
 from django.views.generic import ListView
+from django.views.generic import FormView
 from django.views.generic import CreateView
 from django.views.generic import DetailView
 from django.views.generic import UpdateView
 from django.views.generic import DeleteView
-from django.views.generic import FormView
 from django.urls import reverse
 
 from .models import User
@@ -16,6 +18,7 @@ from .forms import UpdateMapForm
 from .forms import CreateUserForm
 from .forms import UpdateUserForm
 from .forms import MatchSheetForm
+from .forms import CompareForm
 from .utils import get_spreadsheet
 
 
@@ -99,7 +102,7 @@ class DetailUserView(SelectUserMixin, DetailView):
     def get_context_data(self, *args, **kwargs):
         context = super(DetailUserView, self).get_context_data(*args, **kwargs)
         match_list = Match.melee.filter(
-            player__user_id=self.object.id)[:10]
+            player__user_id=self.object.id)
         context['match_list'] = match_list
         context['winning_rate'] = self.object.get_winning_rate()
         context['winning_rate_by_race'] = self.object.get_winning_rate_by_race()
@@ -141,3 +144,24 @@ class MatchLoadSheetView(FormView):
         document_url = form.cleaned_data['document_url']
         Match.create_data_from_sheet(get_spreadsheet(document_url))
         return super().form_valid(form)
+
+
+class CompareView(View):
+    template_name = 'Compare/compare.html'
+
+    def get(self, request, *args, **kwargs):
+        form = CompareForm(request.GET or None)
+        context = {
+            'compare_form': form
+        }
+        if form.is_valid():
+            user_1 = form.cleaned_data['user_1']
+            user_2 = form.cleaned_data['user_2']
+            # map_name = form.cleaned_data['map_name']
+            compare_data = User.objects.get(
+                name__iexact=user_1
+            ).versus(user_2)
+            context['player_queryset'] = compare_data['player_queryset']
+            context['win_count'] = compare_data['win_count']
+            context['lose_count'] = compare_data['lose_count']
+        return render(request, self.template_name, context)
