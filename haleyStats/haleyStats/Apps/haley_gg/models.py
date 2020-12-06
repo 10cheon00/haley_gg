@@ -1,5 +1,6 @@
 # haley_gg/models.py
 from django.db import models
+from django.db.models import Q
 from django.utils import timezone
 from django.urls import reverse
 
@@ -15,17 +16,7 @@ race_list = (
 )
 
 
-class RelatedPlayerQuerySetMixin(object):
-    def get_melee_queryset(self, *args):
-        return Player.objects.select_related(
-            'match',
-            'user',
-        ).filter(
-            match__match_type='one_on_one'
-        ).values(*args)
-
-
-class User(RelatedPlayerQuerySetMixin, models.Model):
+class User(models.Model):
     # name that same as Starcraft Nickname
     name = models.CharField(
         max_length=30,
@@ -74,7 +65,7 @@ class User(RelatedPlayerQuerySetMixin, models.Model):
             'Z': [0, 0, 0],
             'P': [0, 0, 0],
         }
-        match_list = self.get_melee_queryset(
+        match_list = Player.melee().values(
             'match_id',
             'user_id',
             'is_win',
@@ -120,71 +111,48 @@ class User(RelatedPlayerQuerySetMixin, models.Model):
             else:
                 if last_status is not player.is_win:
                     break
-            if player.is_win:
-                count += 1
-            else:
-                count -= 1
+            count += 1 if player.is_win else -1
 
         string = [str(abs(count)), '']
-        if count > 0:
-            string[1] = '연승'
-        else:
-            string[1] = '연패'
+        string[1] = '연승' if count > 0 else '연패'
         return ''.join(string)
 
-    def versus(self, opponent_name):
-        opponent = User.objects.get(name__iexact=opponent_name)
-        match_list = self.get_melee_queryset(
-            'match_id',
-            'user_id',
-            'is_win',
-            'race',
-            'id'
-        )
-        # 승, 패를 세는게 아니라 관련된 매치 리스트를 넘기는게 맞는 것 같다.
-        # 그래서 player queryset을 넘기는게 맞는 것 같다.
+    def get_user_melee_data(self, opponent_name=None):
+        queryset = Player.melee()
 
         id_list = []
-        win_count = 0
-        lose_count = 0
-        total_count = 0
-        for index, match_dict in enumerate(match_list):
-            if match_dict['user_id'] != self.id:
+        for index, data in enumerate(queryset):
+            if data.user_id != self.id:
                 continue
             # find opponent index
-            if match_list[index+1]['match_id'] == match_dict['match_id']:
+            if queryset[index+1].match_id == data.match_id:
                 opponent_index = index + 1
             else:
                 opponent_index = index - 1
-            # continue if opponent is not same given parameter.
-            if match_list[opponent_index]['user_id'] != opponent.id:
-                continue
-
+            # if opponent name is given, check.
+            if opponent_name is not None:
+                if queryset[opponent_index].user.name.lower() != opponent_name.lower():
+                    continue
             # append player index when match with opponent.
-            id_list.append(match_dict['id'])
-            id_list.append(match_list[opponent_index]['id'])
+            id_list.append(data.id)
+            id_list.append(queryset[opponent_index].id)
 
-            total_count += 1
-            if match_dict['is_win']:
-                win_count += 1
-            else:
-                lose_count += 1
-        player_queryset = Player.objects.select_related(
-            'match',
-            'user'
-        ).filter(
+        return queryset.filter(
             id__in=id_list
-        ).values(
-            'match__league__name',
-            'match__name',
-            'match__map__name',
-            'match__remark',
-            'user__name',
-            'is_win',
-            'race',
         )
+
+    def versus(self, opponent_name):
+        queryset = self.get_user_melee_data(
+            opponent_name=opponent_name)
+        total_count = queryset.count()
+        win_count = queryset.filter(
+            Q(user_id=self.id),
+            Q(is_win=True)
+        ).count()
+        lose_count = int(total_count / 2) - win_count
+
         compare_dict = {
-            'player_queryset': player_queryset,
+            'player_queryset': queryset,
             'total_count': total_count,
             'win_count': win_count,
             'lose_count': lose_count,
@@ -408,7 +376,7 @@ class Match(models.Model):
         return string
 
     @classmethod
-    def create_data_from_sheet(self, doc):
+    def create_data_from_sheet(cls, doc):
         # Google Spreadsheet warn you 'read requests per user per 100 seconds'
         # So i bring all data at once.
 
@@ -416,8 +384,8 @@ class Match(models.Model):
         # Managing melee data.
         #
         melee_sheet = doc.worksheet('개인전적Data')
-        match_result_list = melee_sheet.get_all_values()
-        match_length = len(match_result_list)
+        match_data_list = melee_sheet.get_all_values()
+        match_length = len(match_data_list)
         # Loops from last of exist data to last of new data.
         # Only counts if match type isn't top and bottom.
 
@@ -431,8 +399,8 @@ class Match(models.Model):
             match_length,
             2
         ):
-            match_result = match_result_list[i]
-            match_info_dict = get_match_data_from_match_list(match_result)
+            match_data = match_data_list[i]
+            match_info_dict = get_match_data_from_match_list(match_data)
 
             # date
             date = match_info_dict['date']
@@ -451,7 +419,7 @@ class Match(models.Model):
 
             # Map
             map, created = Map.objects.get_or_create(
-                name=match_result[6],
+                name=match_data[6],
                 defaults={
                 })
 
@@ -459,7 +427,7 @@ class Match(models.Model):
             remark = ""
             try:
                 # if match is abstention...
-                remark = match_result[13] or match_result[12]
+                remark = match_data[13] or match_data[12]
             except IndexError:
                 remark = ""
 
@@ -478,10 +446,10 @@ class Match(models.Model):
                 match_type='one_on_one')
 
             # Players
-            player_1_name = match_result[2]
-            player_1_race = match_result[3].upper()
-            player_2_name = match_result[4]
-            player_2_race = match_result[5].upper()
+            player_1_name = match_data[2]
+            player_1_race = match_data[3].upper()
+            player_2_name = match_data[4]
+            player_2_race = match_data[5].upper()
             player_1, created = User.objects.get_or_create(
                 name__iexact=player_1_name,
                 defaults={
@@ -494,7 +462,7 @@ class Match(models.Model):
                     'name': player_2_name,
                     'most_race': player_2_race,
                 })
-            if match_result[7].lower() == player_1_name.lower():
+            if match_data[7].lower() == player_1_name.lower():
                 target_data = [player_1,        # winner
                                player_1_race,
                                player_2,        # loser
@@ -504,7 +472,7 @@ class Match(models.Model):
                                player_2_race,
                                player_1,
                                player_1_race]
-            is_win = True if match_result[8] == '승' else False
+            is_win = True if match_data[8] == '승' else False
 
             Player.objects.create(
                 match=match,
@@ -629,3 +597,12 @@ class Player(models.Model):
         string.append(' ')
         string.append(str(self.user))
         return ''.join(string)
+
+    @classmethod
+    def melee(cls):
+        return cls.objects.select_related(
+            'match',
+            'user'
+        ).filter(
+            match__match_type='one_on_one'
+        )

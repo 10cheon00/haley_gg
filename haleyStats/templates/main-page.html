@@ -2,10 +2,8 @@
 <div class="container p-3">
     <div class="jumbotron">
         <form method="GET">
-            <input type="text" name="search-user" />
-            <button type="submit">
-                검색
-            </button>
+            {{ search_form.as_p }}
+            <input class="btn btn-primary" type="submit" value="Search"/>
         </form>
     </div>
 </div>

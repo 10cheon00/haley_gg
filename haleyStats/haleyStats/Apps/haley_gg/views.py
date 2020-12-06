@@ -11,6 +11,7 @@ from django.views.generic import DeleteView
 from django.urls import reverse
 
 from .models import User
+from .models import Player
 from .models import Map
 from .models import Match
 from .forms import CreateMapForm
@@ -101,9 +102,17 @@ class DetailUserView(SelectUserMixin, DetailView):
 
     def get_context_data(self, *args, **kwargs):
         context = super(DetailUserView, self).get_context_data(*args, **kwargs)
-        match_list = Match.melee.filter(
-            player__user_id=self.object.id)
-        context['match_list'] = match_list
+        match_queryset = self.object.get_user_melee_data()
+        # match_dict = match_queryset.values(
+        #     'match__league__name',
+        #     'match__name',
+        #     'match__date',
+        #     'match__map__name',
+        #     'user__name',
+        #     'race',
+        #     'is_win',
+        # )
+        context['match_queryset'] = match_queryset
         context['winning_rate'] = self.object.get_winning_rate()
         context['winning_rate_by_race'] = self.object.get_winning_rate_by_race()
         context['winning_status'] = self.object.get_winning_status()
@@ -158,10 +167,7 @@ class CompareView(View):
             user_1 = form.cleaned_data['user_1']
             user_2 = form.cleaned_data['user_2']
             # map_name = form.cleaned_data['map_name']
-            compare_data = User.objects.get(
-                name__iexact=user_1
-            ).versus(user_2)
-            context['player_queryset'] = compare_data['player_queryset']
-            context['win_count'] = compare_data['win_count']
-            context['lose_count'] = compare_data['lose_count']
+            context.update(
+                User.objects.get(name__iexact=user_1).versus(user_2)
+            )
         return render(request, self.template_name, context)

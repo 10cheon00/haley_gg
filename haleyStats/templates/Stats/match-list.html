@@ -3,11 +3,11 @@
     Current Matches
 </div>
 <hr>
-<div class="match-list pb-3">
+<div class="match-list">
     <!-- 굳이 여기에 모든 전적을 보여주는 곳이 필요한가 싶다. -->
-    <ul class="list-group">
-    {% for match in page_obj %}
-        <li class="list-group-item">
+    <div class="list-group">
+    <!-- {% for match in page_obj %}
+        <div class="list-group-item">
             <div class="d-flex justify-content-center align-items-center">
                 <div class="mr-auto text-center" id="league">
                     <div class="h5">{{ match.league.name }}<br></div>
@@ -39,9 +39,9 @@
                     <small>{{ match.date }}</small>
                 </div>
             </div>
-        </li>
-    {% endfor %}
-    </ul>
+        </div>
+    {% endfor %} --> 
+    </div>
 
 
 

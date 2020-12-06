@@ -28,44 +28,49 @@
 </div>
 
 <div class="match-list">
-    <ul class="list-group">
-    {% for match in match_list %}
-        <li class="list-group-item">
-            <div class="d-flex justify-content-center align-items-center">
-                <div class="mr-auto text-center" id="league">
-                    <div class="h5">{{ match.league.name }}<br></div>
-                    <small>{{ match.name }}</small>
+    <div class="list-group">
+        {% for data in match_queryset %}
+        {% cycle True False as row silent %}
+        {% if row %}
+        <div class="list-group-item">
+        {% endif %}
+            <div class="align-items-center">
+                <div class="h3" id="match-name">
+                {% if row %}
+                {{ data.match.league.name }}
+                    <span class="h6 text-secondary">{{ data.match.name }}</span>
+                {% endif %}
                 </div>
-                <div class="" id="result">
-                    <!-- 이 코드도 player_set을 계속 호출하니 딜레이가 심하다.
-                    나중에 select_related로 값만 뽑아 넘겨주면 되겠다. -->
-                    {% for player in match.player_set.all %}
-                        <a href="{{ player.user.get_absolute_url }}"
-                           class="h3"
-                           >{{ player.user.name }}&nbsp;                            
-                            <span class="h4">
-                                ({{ player.race }})
-                            </span>
+                <div class="">
+                    <div class="h4">
+                        <!-- 이게 안되네.. -->
+                        <a href="{{ data.user.get_absolute_url }}"
+                           >{{ data.user.name }}
+                            <small>&nbsp;({{ data.race}})
+                                </small>
                         </a>
-                        {% if player.is_win %}
-                            <div class="badge badge-primary">승</div>
-                        {% else %}
-                            <div class="badge badge-danger">패</div>
-                        {% endif %}
-                        <br/>
-                    {% endfor %}
+                    {% if data.is_win %}
+                        <div class="badge badge-primary">승</div>
+                    {% else %}
+                        <div class="badge badge-danger">패</div>
+                    {% endif %}
+                    </div>
                 </div>
-                &nbsp;
-                <div class="" id="map">
-                    <a href="{{ match.map.get_absolute_url }}">{{ match.map }}</a>
-                </div>
-                <div class="ml-auto text-secondary" id="date">
-                    <small>{{ match.date }}</small>
+                <div class="text-secondary">
+                {% if row %}
+                    <a href="{{ data.match.map.get_absolute_url }}"
+                       >{{ data.match.map.name }}
+                    </a>
+                {% else %}
+                    <small>{{ data.match.date }}</small>
+                {% endif %}
                 </div>
             </div>
-        </li>
-    {% endfor %}
-    </ul>
+        {% if not row or forloop.last %}
+        </div>   
+        {% endif %}
+        {% endfor %}
+    </div>
 </div>
 <hr>
 

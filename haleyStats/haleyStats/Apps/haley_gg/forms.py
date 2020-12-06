@@ -178,17 +178,25 @@ class CompareForm(forms.Form):
         validators=[search_user],
         required=True)
 
-    map_name = forms.CharField(
-        label="맵",
-        required=False)
+    # Leave map filter to frontend...
+    # map_name = forms.CharField(
+    #     label="맵",
+    #     required=False)
 
-    def clean_map(self):
-        map_name = self.cleaned_data['map_name']
-        if map_name == "":
-            return map_name
-        try:
-            Map.objects.get(name__iexact=map_name)
-        except ObjectDoesNotExist:
-            error_msg = u"This map is not exist."
-            self.add_error('map', error_msg)
-        return map_name
+    # def clean_map(self):
+    #     map_name = self.cleaned_data['map_name']
+    #     if map_name == "":
+    #         return map_name
+    #     try:
+    #         Map.objects.get(name__iexact=map_name)
+    #     except ObjectDoesNotExist:
+    #         error_msg = u"This map is not exist."
+    #         self.add_error('map', error_msg)
+    #     return map_name
+
+
+class SearchUserForm(forms.Form):
+    user_name = forms.CharField(
+        label="유저명",
+        validators=[search_user],
+        required=True)
