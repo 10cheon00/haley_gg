@@ -1,0 +1,7 @@
+{% extends 'base.html' %}
+{% block nav-search %}
+<form method="GET">
+    {{ search_form.as_p }}
+    <input class="btn btn-primary" type="submit" value="Search"/>
+</form>
+{% endblock nav-search %}

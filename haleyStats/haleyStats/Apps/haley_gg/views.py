@@ -1,14 +1,15 @@
 # haley_gg/views.py
 from django.shortcuts import get_object_or_404
 from django.shortcuts import render
+from django.urls import reverse
 from django.views.generic import View
 from django.views.generic import ListView
+from django.views.generic import TemplateView
 from django.views.generic import FormView
 from django.views.generic import CreateView
 from django.views.generic import DetailView
 from django.views.generic import UpdateView
 from django.views.generic import DeleteView
-from django.urls import reverse
 
 from .models import User
 from .models import Player
@@ -102,17 +103,7 @@ class DetailUserView(SelectUserMixin, DetailView):
 
     def get_context_data(self, *args, **kwargs):
         context = super(DetailUserView, self).get_context_data(*args, **kwargs)
-        match_queryset = self.object.get_user_melee_data()
-        # match_dict = match_queryset.values(
-        #     'match__league__name',
-        #     'match__name',
-        #     'match__date',
-        #     'match__map__name',
-        #     'user__name',
-        #     'race',
-        #     'is_win',
-        # )
-        context['match_queryset'] = match_queryset
+        context['match_queryset'] = self.object.get_user_melee_data()
         context['winning_rate'] = self.object.get_winning_rate()
         context['winning_rate_by_race'] = self.object.get_winning_rate_by_race()
         context['winning_status'] = self.object.get_winning_status()
@@ -171,3 +162,12 @@ class CompareView(View):
                 User.objects.get(name__iexact=user_1).versus(user_2)
             )
         return render(request, self.template_name, context)
+
+
+class RankView(TemplateView):
+    template_name = 'Rank/list.html'
+
+    def get_context_data(self, *args, **kwargs):
+        context = super().get_context_data(*args, **kwargs)
+        context.update(User.get_rank_data())
+        return context

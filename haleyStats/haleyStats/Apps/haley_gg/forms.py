@@ -199,4 +199,11 @@ class SearchUserForm(forms.Form):
     user_name = forms.CharField(
         label="유저명",
         validators=[search_user],
-        required=True)
+        required=False)
+
+    def clean_user_name(self):
+        user_name = self.cleaned_data['user_name']
+        if user_name == "":
+            msg = u"이름을 입력해주세요."
+            self.add_error('user_name', msg)
+        return user_name

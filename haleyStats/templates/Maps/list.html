@@ -1,33 +1,27 @@
-{% extends 'Maps/base-map.html' %} 
-{% block content %} {% load static %}
+{% extends 'Maps/base-map.html' %} {% block content %} {% load static %}
 <!-- <link rel="stylesheet" href="{% static 'Maps/list.css' %}" /> -->
-<div class="container p-3">
+<div class="p-3">
     <div class="row justify-content-center">
         {% for map in maps %}
-        <div class="col-md-4 p-3">
-            <div class="card">
-                <!-- Add view overlay option to this image with bootstrap mask, but postponed.-->
-                <a href="{{map.name}}">
+        <div class="col-md-4">
+            <div class="card mb-3">
+                <a href="{{ map.name }}">
                     <img class="card-img-top" src="{{ map.image.url }}" />
                 </a>
                 <div class="card-body text-center">
-                    <a href="{{map.get_absolute_url}}">
+                    <a href="{{ map.get_absolute_url }}">
                         <h4 class="card-title">
-                            {{map.name}}
+                            {{ map.name }}
                         </h4>
                     </a>
-                    <div class="card-text">
-                        {{map.match_count}}회 매치
+                    <div class="card-text text-secondary">
+                        {{ map.match_count }}회 매치
                     </div>
                 </div>
             </div>
         </div>
         {% endfor %}
     </div>
-    <a href="new-map/" 
-       class="btn text-white"
-       style="background-color:#4A4A4A"
-    >New Map</a>
+    <a href="new-map/" class="btn text-white" style="background-color: #4a4a4a;">New Map</a>
 </div>
-
 {% endblock %}

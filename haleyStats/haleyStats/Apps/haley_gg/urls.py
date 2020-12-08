@@ -61,3 +61,10 @@ urlpatterns += [
          views.CompareView.as_view(),
          name="compare"),
 ]
+
+# ranks.urls
+urlpatterns += [
+    path('rank/',
+         views.RankView.as_view(),
+         name="ranks"),
+]

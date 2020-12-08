@@ -1,6 +1,6 @@
 # haley_gg/models.py
 from django.db import models
-from django.db.models import Q
+from django.db.models import Count, Q
 from django.utils import timezone
 from django.urls import reverse
 
@@ -105,7 +105,7 @@ class User(models.Model):
         count = 0
         last_status = True
         # stop loop when current status is different last status.
-        for player in self.player_set.all():
+        for player in self.player_set.filter(match__type='one_on_one'):
             if count == 0:
                 last_status = player.is_win
             else:
@@ -119,7 +119,10 @@ class User(models.Model):
 
     def get_user_melee_data(self, opponent_name=None):
         queryset = Player.melee()
-
+        # defer로 원하는 field만 가져오도록 하는 방법이 있다.
+        # 그런데 그렇게 하니까 더 딜레이가 걸린다.
+        # 왜 그런지는 잘 모르겠다...만 loop최적화를 해야할 것 같다.
+        # 어쩌면 player_set처럼 내부기능이 존재할 것 같다.
         id_list = []
         for index, data in enumerate(queryset):
             if data.user_id != self.id:
@@ -136,7 +139,6 @@ class User(models.Model):
             # append player index when match with opponent.
             id_list.append(data.id)
             id_list.append(queryset[opponent_index].id)
-
         return queryset.filter(
             id__in=id_list
         )
@@ -158,6 +160,57 @@ class User(models.Model):
             'lose_count': lose_count,
         }
         return compare_dict
+
+    @classmethod
+    def get_rank_data(cls):
+        # 1. player 중에 자신과 관련된 것.
+        # 2. match_type이 one_on_one인 것.
+        # Model.objects.filter()를 하면 모델 전체에게 명령을 내리는데,
+        # related_object도 다 접근해서 갖고오게 된다.
+        # 해당 user에 related인 player들만 갖고 올 때 1v1인 경우만 갖고 와서
+        # annotate로 player의 총 개수를 가지는 컬럼을 하나 만들고
+        # values와 order_by로 최상위 5명의 이름과 총 개수만 반환하도록 했다.
+        # https://docs.djangoproject.com/en/dev/topics/db/aggregation/#order-of-annotate-and-filter-clauses
+        rank_data_dict = {}
+        """
+        보여줘야할 데이터들
+
+        공식전
+         L  다전,
+         L  연승(개인+팀플)
+         L  연승(개인)
+         L  연패(개인+팀플)
+         L  연패(개인)
+
+        프로리그
+         L  다전
+         L  연승(개인+팀플)
+         L  연승(개인)
+         L  연승(팀플)
+         L  에결연승
+         L  연패(개인+팀플)
+         L  연패(개인)
+         L  연패(팀플)
+
+        개인리그
+         L  다전
+         L  연승
+         L  연패
+
+        """
+        rank_data_dict['total_matches'] = cls.objects.filter(
+            player__match__type__exact='one_on_one'
+        ).annotate(
+            # 이 링크가 진짜다.
+            total_matches=Count(
+                'player'
+            )
+        ).values(
+            'name',
+            'total_matches',
+        ).order_by('-total_matches')[:5]
+
+        return rank_data_dict
 
 
 class Map(models.Model):
@@ -195,7 +248,7 @@ class Map(models.Model):
         self.save()
 
     # Calculate statistics on victory by race.
-    # Only works when match_type is melee.
+    # Only works when type is melee.
     #
     # Too slow....
     #
@@ -220,7 +273,7 @@ class Map(models.Model):
             'map'
         ).values_list(
             'match__map_id',
-            'match__match_type',
+            'match__type',
             'match_id',
             'is_win',
             'race',
@@ -338,7 +391,7 @@ class Match(models.Model):
 
     # Below fields are not shown to user.
     # is one on one match or top and bottom?
-    match_type = models.CharField(
+    type = models.CharField(
         max_length=20,
         choices=(
             ('one_on_one', '1대1'),
@@ -443,7 +496,7 @@ class Match(models.Model):
                 date=date,
                 map=map,
                 remark=remark,
-                match_type='one_on_one')
+                type='one_on_one')
 
             # Players
             player_1_name = match_data[2]
@@ -541,16 +594,16 @@ class Match(models.Model):
                 date=date,
                 map=map,
                 remark=remark,
-                match_type='top_and_bottom')
+                type='top_and_bottom')
 
             # Players
+            # race does not matter
+            player_race = ''
             for i in range(2, 8):
-                # race does not matter
-                player_race = ''
                 if i < 5:
-                    is_win = match_result[9] in match_result[2:5]
+                    is_win = True if match_result[9] in match_result[2:5] else False
                 else:
-                    is_win = match_result[9] in match_result[5:8]
+                    is_win = True if match_result[9] in match_result[5:8] else False
 
                 player, created = User.objects.get_or_create(
                     name__iexact=match_result[i],
@@ -573,14 +626,14 @@ class Player(models.Model):
         on_delete=models.CASCADE,
         blank=True)
 
-    # is win?
-    is_win = models.BooleanField(
-        default=False)
-
     # player who in game
     user = models.ForeignKey(
         User,
         on_delete=models.CASCADE)
+
+    # is win?
+    is_win = models.BooleanField(
+        default=False)
 
     # race in this match
     race = models.CharField(
@@ -600,9 +653,11 @@ class Player(models.Model):
 
     @classmethod
     def melee(cls):
+        # 의외로 딜레이가 없다. 이거 가지고 뭔가 하는 작업이 딜레이가 심한듯.
         return cls.objects.select_related(
             'match',
+            'match__map',
             'user'
         ).filter(
-            match__match_type='one_on_one'
+            match__type='one_on_one'
         )

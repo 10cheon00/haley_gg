@@ -33,8 +33,11 @@ def load_document(url):
 
 def search_user(name):
     try:
-        user = User.objects.get(name__iexact=name)
-        return user
+        if name:
+            user = User.objects.get(name__iexact=name)
+            return user
+        else:
+            msg = u"이름을 입력해 주세요."
     except ObjectDoesNotExist:
         msg = u"존재하지 않는 유저입니다."
-        raise ValidationError(msg)
+    raise ValidationError(msg)

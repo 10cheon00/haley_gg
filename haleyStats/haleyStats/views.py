@@ -1,7 +1,6 @@
-from django.shortcuts import render
+from django.shortcuts import render, reverse
 from django.http import HttpResponseRedirect
 
-from .Apps.haley_gg.models import User
 from .Apps.haley_gg.forms import SearchUserForm
 
 
@@ -9,8 +8,12 @@ def main_page(request):
     form = SearchUserForm(request.GET or None)
 
     if form.is_valid():
-        user = User.objects.get(name__iexact=form.cleaned_data['user_name'])
-        return HttpResponseRedirect(user.get_absolute_url())
+        return HttpResponseRedirect(
+            reverse(
+                "haley_gg:users_detail",
+                kwargs={"name": form.cleaned_data['user_name']}
+            )
+        )
     context = {
         'search_form': form
     }

@@ -1,3 +1,5 @@
 {% extends 'Rank/base-rank.html' %}{% block content %}
-
+{% for user in total_matches %}
+{{ user.name }} | {{ user.total_matches }}<br>
+{% endfor %}
 {% endblock %}
