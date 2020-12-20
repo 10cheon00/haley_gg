@@ -43,10 +43,10 @@ MEDIA_ROOT = BASE_DIR.child('media')
 # (staticfiles.E002)
 # The STATICFILES_DIRS setting should not contain the STATIC_ROOT setting.
 # Why ??? Why????
-# STATIC_ROOT = BASE_DIR.child("static")
-STATICFILES_DIRS = [
-    BASE_DIR.child('static'),
-]
+STATIC_ROOT = BASE_DIR.child("static")
+# STATICFILES_DIRS = [
+#     BASE_DIR.child('static'),
+# ]
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/3.1/howto/deployment/checklist/

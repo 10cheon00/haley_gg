@@ -7,7 +7,7 @@ ALLOWED_HOSTS += ['*']
 INSTALLED_APPS += [
     'haleyStats.Apps.haley_gg.apps.HaleyGgConfig',
     'bootstrap4',
-    'debug_toolbar'
+    'debug_toolbar',
 ]
 
 MIDDLEWARE += [
@@ -22,4 +22,7 @@ STATIC_URL = '/static/'
 
 MEDIA_URL = '/media/'
 
-INTERNAL_IPS = ['0.0.0.0',]
+INTERNAL_IPS = [
+    # '0.0.0.0',
+    '172.17.0.1'
+]
