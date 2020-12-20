@@ -2,6 +2,15 @@ import datetime
 import gspread
 import os
 
+from django.db.models import (
+    F,
+    Q,
+    Count,
+    Max,
+    Subquery,
+    OuterRef,
+)
+
 from oauth2client.service_account import ServiceAccountCredentials
 from gspread.utils import NoValidUrlKeyFound
 
@@ -84,3 +93,13 @@ def get_match_data_from_match_list(match_result):
     match_data_dict['name'] = name
     return match_data_dict
 
+
+def get_streak_count(queryset):
+    count = 0
+    if queryset:
+        for player in queryset:
+            if player.is_win:
+                count += 1
+            else:
+                break
+    return count

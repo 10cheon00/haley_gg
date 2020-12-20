@@ -1,12 +1,27 @@
 # haley_gg/models.py
 from django.db import models
-from django.db.models import Count, Q
+from django.db.models import (
+    Count,
+    Sum,
+    Case,
+    When,
+    Max,
+    F,
+    Q,
+    Subquery,
+    OuterRef,
+    Value,
+)
+from django.db.models.functions import Coalesce
+from django.db.models import Window
 from django.utils import timezone
 from django.urls import reverse
 
 from .manager import MeleeMatchManager
 from .manager import TeamMatchManager
+from .manager import MeleePlayerManager
 from .utils import get_match_data_from_match_list
+from .utils import get_streak_count
 
 race_list = (
     ('T', 'Terran'),
@@ -65,7 +80,7 @@ class User(models.Model):
             'Z': [0, 0, 0],
             'P': [0, 0, 0],
         }
-        match_list = Player.melee().values(
+        match_list = Player.melee.values(
             'match_id',
             'user_id',
             'is_win',
@@ -118,7 +133,7 @@ class User(models.Model):
         return ''.join(string)
 
     def get_user_melee_data(self, opponent_name=None):
-        queryset = Player.melee()
+        queryset = Player.melee.all()
         # defer로 원하는 field만 가져오도록 하는 방법이 있다.
         # 그런데 그렇게 하니까 더 딜레이가 걸린다.
         # 왜 그런지는 잘 모르겠다...만 loop최적화를 해야할 것 같다.
@@ -166,7 +181,7 @@ class User(models.Model):
         # 1. player 중에 자신과 관련된 것.
         # 2. match_type이 one_on_one인 것.
         # Model.objects.filter()를 하면 모델 전체에게 명령을 내리는데,
-        # related_object도 다 접근해서 갖고오게 된다.
+        # 외부키로 연결된 오브젝트에 접근해서 갖고오게 된다. select_related를 해두면 더 좋을려나..
         # 해당 user에 related인 player들만 갖고 올 때 1v1인 경우만 갖고 와서
         # annotate로 player의 총 개수를 가지는 컬럼을 하나 만들고
         # values와 order_by로 최상위 5명의 이름과 총 개수만 반환하도록 했다.
@@ -198,18 +213,106 @@ class User(models.Model):
          L  연패
 
         """
+        # 각 user의 player의 개수를 세되, 여기선 1v1인 매치만 세었다.
         rank_data_dict['total_matches'] = cls.objects.filter(
             player__match__type__exact='one_on_one'
         ).annotate(
-            # 이 링크가 진짜다.
-            total_matches=Count(
-                'player'
-            )
+            total_matches=Count('player')
         ).values(
             'name',
             'total_matches',
         ).order_by('-total_matches')[:5]
 
+        # 연승 찾는 방법
+        # 1.  제일 최근에 진 row를 찾는다.
+        #     제일 최근에 졌으므로 그 것보다 더 최근의 매치들은 다 이겼을 거다.
+        # 2.  그 row보다 id값이 큰 것들의 count를 계산한다.
+
+        # 여기선 그냥 밀리전적만 보므로, 필터링을 한 전적결과만 넣어주면
+        # get_streak_count에서 결과를 반환해줄거다.
+        # streak_queryset = Player.melee.annotate(
+        #     last_defeat=Window(
+        #         expression=Max(
+        #             'id',
+        #             filter=Q(is_win=False)
+        #         ),
+        #         partition_by=F('user'),
+        #         order_by=[F('user').asc()]
+        #     )
+        # )
+        # streak_queryset = Player.melee.annotate(
+        #     is_streak=Subquery(
+        #         streak_queryset.filter(user=OuterRef('user')).values('last_defeat')[:1]
+        #         # 각 user별로 max_id값을 갖고오는데, Subquery에서는 어떻게 해야
+        #         # 개별적으로 저장되는지...
+        #     )
+        # )
+        # queryset = streak_queryset.values('user').annotate(
+        #     streak_sum=Count(
+        #         'is_streak', filter=Q(id__gt=F('is_streak'))
+        #     )
+        # ).order_by('-streak_sum')
+        
+        
+        
+        # last_defeat = Player.melee.values('user').annotate(
+        #     max_id=Window(
+        #         expression=Max(
+        #             'id',
+        #             filter=Q(is_win=False)
+        #         ),
+        #         partition_by=F('user'),
+        #         order_by=F('user').asc(),
+        #         output_field=models.IntegerField()
+        #     )
+        # )
+        # q = Player.melee.annotate(
+        #     streak=Case(
+        #         When(
+        #             id__gt=last_defeat.filter(
+        #                 user=OuterRef('user')
+        #             ).values('max_id')[:1],
+        #             then=1
+        #         ),
+        #         default=0,
+        #         output_field=models.IntegerField()
+        #     )
+        # )
+        # queryset = Player.melee.values('user').annotate(
+        #     count=Subquery(
+        #         q.filter(user=OuterRef('user')).annotate(
+        #             count=Sum('streak')
+        #         ).values('count')[:1]
+        #     )
+        # ).values('user', 'count')
+
+        player_queryset = Player.melee.all()
+        streak_rank = {}
+        for user in User.objects.all():
+            user_queryset = player_queryset.filter(user=user)
+            count = get_streak_count(user_queryset)
+            if count > 0:
+                streak_rank[user] = count
+        rank_data_dict['q'] = streak_rank
+        # 뭔 짓을 해도 3초이상 걸린다 왜그럴까..
+        # filtered_id = Player.melee.filter(
+        #     Q(user=OuterRef('user')) &
+        #     Q(is_win=False)
+        # ).order_by('-id')
+        # queryset = User.objects.prefetch_related('player_set').annotate(
+        #     streak_sum=Count(
+        #         'player__id',
+        #         filter=Q(player__id__gt=filtered_id.values('id')[:1]) & Q(player__is_win=False),
+        #         output_field=models.IntegerField()
+        #     )
+        # )
+        # 제일 마지막으로 진 값 위로는 1이 저장되어 있음
+        # group by는 열들을 모아서 집계를 한다. 하지만 partition by는 열을 모으지 않고
+        # 집계값만 각 열에 넣어준다.
+
+        # rank_data_dict['queryset'] = queryset[300:600]
+        # rank_data_dict['streak_queryset'] = last_defeat_queryset[:100]
+        # rank_data_dict['streak_queryset'] = streak_queryset[:100]
         return rank_data_dict
 
 
@@ -641,6 +744,10 @@ class Player(models.Model):
         default="",
         choices=race_list[:-1])
 
+    # Managers
+    objects = models.Manager()
+    melee = MeleePlayerManager()
+
     class Meta:
         ordering = ['match']
 
@@ -650,14 +757,3 @@ class Player(models.Model):
         string.append(' ')
         string.append(str(self.user))
         return ''.join(string)
-
-    @classmethod
-    def melee(cls):
-        # 의외로 딜레이가 없다. 이거 가지고 뭔가 하는 작업이 딜레이가 심한듯.
-        return cls.objects.select_related(
-            'match',
-            'match__map',
-            'user'
-        ).filter(
-            match__type='one_on_one'
-        )

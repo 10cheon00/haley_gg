@@ -1,5 +1,20 @@
 {% extends 'Rank/base-rank.html' %}{% block content %}
-{% for user in total_matches %}
-{{ user.name }} | {{ user.total_matches }}<br>
-{% endfor %}
+<div class="row p-3">
+    <div class="col-md-2">
+        {% for user in total_matches %} {{ user.name }} | {{ user.total_matches }}<br />
+        {% endfor %}
+    </div>
+    <div class="col-md">
+        {% for data in queryset %}
+            {{ data.user }} | {{ data.count }}
+            <br/>
+        {% endfor %}
+    </div>
+    <div class="col-md">
+        {% for user, value in q.items %} 
+            {{ user }} | {{ value }}
+            <br>
+        {% endfor %}
+    </div>
+</div>
 {% endblock %}
