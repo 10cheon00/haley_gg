@@ -10,6 +10,7 @@ from django.views.generic import CreateView
 from django.views.generic import DetailView
 from django.views.generic import UpdateView
 from django.views.generic import DeleteView
+from django.db.models import Count
 
 from .models import User
 from .models import Player
@@ -28,7 +29,6 @@ from .utils import get_spreadsheet
 class SelectMapMixin(object):
     def get_object(self):
         map = get_object_or_404(Map, name__iexact=self.kwargs['name'])
-        map.update_match_count()
         return map
 
 
@@ -39,11 +39,10 @@ class MapListView(ListView):
     paginated_by = 9
     context_object_name = 'maps'
 
-    def get_queryset(self):
-        maps = Map.objects.all()
-        for map in maps:
-            map.update_match_count()
-        return maps
+    def get_context_data(self, *args, **kwargs):
+        context = super().get_context_data(*args, **kwargs)
+        context['maps'] = Map.get_match_count().order_by('-count')
+        return context
 
 
 # Create a map object.
@@ -62,6 +61,9 @@ class DetailMapView(SelectMapMixin, DetailView):
     def get_context_data(self, *args, **kwargs):
         context = super(DetailMapView, self).get_context_data(*args, **kwargs)
         # only works on melee maps
+        context['match_count'] = Map.get_match_count().filter(
+            name__iexact=self.kwargs['name']
+        ).values_list('count')[0]
         context['winning_rate_dict'] = self.object.get_statistics_on_winning_rate()
         return context
 
@@ -131,6 +133,12 @@ class MatchListView(ListView):
     template_name = "Stats/match-list.html"
     paginate_by = 10
     model = Match
+    queryset = Match.melee.prefetch_related(
+        'player_set',
+        'player_set__user' # holy!
+    ).select_related(
+        'league', 'map'
+    )
 
 
 class MatchLoadSheetView(FormView):

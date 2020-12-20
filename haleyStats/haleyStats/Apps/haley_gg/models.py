@@ -332,12 +332,12 @@ class Map(models.Model):
         upload_to="Maps/images/",
         default="Maps/images/default.jpg")
 
-    # match count on this map
-    match_count = models.PositiveIntegerField(
-        default=0)
+    # # match count on this map
+    # match_count = models.PositiveIntegerField(
+    #     default=0)
 
     class Meta:
-        ordering = ['-match_count', 'name']
+        ordering = ['name']
 
     def __str__(self):
         return self.name
@@ -346,9 +346,14 @@ class Map(models.Model):
         return reverse('haley_gg:maps_detail', kwargs={"name": self.name})
 
     # Count matches related this map.
-    def update_match_count(self):
-        self.match_count = self.match_set.all().count()
-        self.save()
+    # def update_match_count(self):
+    #     self.match_count = self.match_set.all().count()
+    #     self.save()
+    @classmethod
+    def get_match_count(cls):
+        return cls.objects.prefetch_related('match').annotate(
+            count=Count('match')
+        )
 
     # Calculate statistics on victory by race.
     # Only works when type is melee.
@@ -458,7 +463,8 @@ class Match(models.Model):
     league = models.ForeignKey(
         League,
         on_delete=models.CASCADE,
-        verbose_name="리그")
+        verbose_name="리그",
+        related_name='match')
 
     # Round, dual tournament or something like that. Seems like game title
     # ex. Round 1, 16강 A조 ... etc
@@ -477,13 +483,14 @@ class Match(models.Model):
     # match date
     date = models.DateField(
         default=timezone.now,
-        verbose_name="경기 날짜")
+        verbose_name='경기 날짜')
 
     # map used in match
     map = models.ForeignKey(
         Map,
         on_delete=models.CASCADE,
-        verbose_name="맵")
+        verbose_name='맵',
+        related_name='match')
 
     # remake for this match
     remark = models.CharField(

@@ -4,13 +4,13 @@
 <div class="profile">
     <div class="row map-info bg-dark">
         <div class="col-md-3 m-auto">
-            <img class="img m-3" src="{{map.image.url}}" />
+            <img class="img m-3" src="{{ map.image.url }}" />
         </div>
         <div class="col-md-5 align-self-center">
             <div class="map-name text-white">
-                {{map.name}}
+                {{ map.name }}
             </div>
-            <small class="text-secondary">{{map.match_count}} 회 매치</small>
+            <small class="text-secondary">{{ match_count }} 회 매치</small>
         </div>
     </div>
     <div class="row">
@@ -27,15 +27,15 @@
                 {% for winner_race, statistic_datas in winning_rate_dict.items %}
                 <tr >
                     <th scope="row" class="align-middle">
-                        {{winner_race}}
+                        {{ winner_race }}
                     </th>
                     {% for loser_race, stats in statistic_datas.items %}
                         {% if winner_race == loser_race %}
-                        <td class="align-middle">{{stats|first}} 전</td>
+                        <td class="align-middle">{{ stats|first }} 전</td>
                         {% else %}
                         <td class="align-middle">
-                            {{stats|first}} 승&nbsp;
-                            {{stats|last}}%
+                            {{ stats|first }} 승&nbsp;
+                            {{ stats|last }}%
                         </td>
                         {% endif %}
                     {% endfor %}
@@ -45,5 +45,5 @@
         </table>
     </div>
 </div>
-{{number_of_wins_by_race}}
+{{ number_of_wins_by_race }}
 {% endblock content %}
