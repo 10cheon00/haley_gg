@@ -230,7 +230,13 @@ class User(models.Model):
 
         # 여기선 그냥 밀리전적만 보므로, 필터링을 한 전적결과만 넣어주면
         # get_streak_count에서 결과를 반환해줄거다.
-        # streak_queryset = Player.melee.annotate(
+
+        # 오늘의 상식
+        # annotate에서 만든 필드는 그 annotate에서는 접근이 안된다.
+        # annotate(A).annotate(B)
+        # A에서 만든건 B에서만 접근가능하다.
+
+        # q = Player.melee.annotate(
         #     last_defeat=Window(
         #         expression=Max(
         #             'id',
@@ -240,79 +246,42 @@ class User(models.Model):
         #         order_by=[F('user').asc()]
         #     )
         # )
-        # streak_queryset = Player.melee.annotate(
-        #     is_streak=Subquery(
-        #         streak_queryset.filter(user=OuterRef('user')).values('last_defeat')[:1]
-        #         # 각 user별로 max_id값을 갖고오는데, Subquery에서는 어떻게 해야
-        #         # 개별적으로 저장되는지...
-        #     )
-        # )
-        # queryset = streak_queryset.values('user').annotate(
-        #     streak_sum=Count(
-        #         'is_streak', filter=Q(id__gt=F('is_streak'))
-        #     )
-        # ).order_by('-streak_sum')
-        
-        
-        
-        # last_defeat = Player.melee.values('user').annotate(
-        #     max_id=Window(
-        #         expression=Max(
-        #             'id',
-        #             filter=Q(is_win=False)
-        #         ),
-        #         partition_by=F('user'),
-        #         order_by=F('user').asc(),
-        #         output_field=models.IntegerField()
-        #     )
-        # )
-        # q = Player.melee.annotate(
-        #     streak=Case(
-        #         When(
-        #             id__gt=last_defeat.filter(
-        #                 user=OuterRef('user')
-        #             ).values('max_id')[:1],
-        #             then=1
-        #         ),
-        #         default=0,
-        #         output_field=models.IntegerField()
-        #     )
-        # )
-        # queryset = Player.melee.values('user').annotate(
-        #     count=Subquery(
-        #         q.filter(user=OuterRef('user')).annotate(
-        #             count=Sum('streak')
-        #         ).values('count')[:1]
-        #     )
-        # ).values('user', 'count')
 
-        player_queryset = Player.melee.all()
-        streak_rank = {}
-        for user in User.objects.all():
-            user_queryset = player_queryset.filter(user=user)
-            count = get_streak_count(user_queryset)
-            if count > 0:
-                streak_rank[user] = count
-        rank_data_dict['q'] = streak_rank
-        # 뭔 짓을 해도 3초이상 걸린다 왜그럴까..
-        # filtered_id = Player.melee.filter(
+        # q = Player.melee.filter(
         #     Q(user=OuterRef('user')) &
         #     Q(is_win=False)
         # ).order_by('-id')
-        # queryset = User.objects.prefetch_related('player_set').annotate(
-        #     streak_sum=Count(
-        #         'player__id',
-        #         filter=Q(player__id__gt=filtered_id.values('id')[:1]) & Q(player__is_win=False),
-        #         output_field=models.IntegerField()
-        #     )
-        # )
+
+        streak_queryset = Player.melee.values('user').order_by('user').annotate(
+            streak=Count(
+                'id',
+                filter=Q(id__gt=Subquery(
+                        Player.melee.filter(
+                            Q(user=OuterRef('user')) &
+                            Q(is_win=False)
+                        ).order_by('-id').values('id')[:1]
+                    )
+                )
+            )
+        ).values('user', 'streak').order_by('user').filter(streak__gt=0)
+
+        # player_queryset = Player.melee.all()
+        # streak_rank = {}
+        # for user in User.objects.all():
+        #     user_queryset = player_queryset.filter(user=user)
+        #     count = get_streak_count(user_queryset)
+        #     if count > 0:
+        #         streak_rank[user] = count
+        # rank_data_dict['q'] = streak_rank
+        # 뭔 짓을 해도 3초이상 걸린다 왜그럴까..
+
         # 제일 마지막으로 진 값 위로는 1이 저장되어 있음
         # group by는 열들을 모아서 집계를 한다. 하지만 partition by는 열을 모으지 않고
         # 집계값만 각 열에 넣어준다.
 
         # rank_data_dict['queryset'] = queryset[300:600]
         # rank_data_dict['streak_queryset'] = last_defeat_queryset[:100]
-        # rank_data_dict['streak_queryset'] = streak_queryset[:100]
+        rank_data_dict['streak_queryset'] = streak_queryset[:100]
         return rank_data_dict
 
 
