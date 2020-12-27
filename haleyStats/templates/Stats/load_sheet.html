@@ -1,4 +1,6 @@
-{% extends 'Stats/base-stats.html' %} {% block content %}
+{% extends 'base.html' %}
+{% block nav-match %}active{% endblock nav-match %}
+{% block content %}
 <div class="container">
     <form method="POST">
         {% csrf_token %}

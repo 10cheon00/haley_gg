@@ -2,7 +2,7 @@
     <head>
         <title>Haley.gg</title>
         {% load static %}
-        <link rel="shortcut icon" type="image/png" href="{% static 'favicon.ico' %}"/>
+        <link rel="shortcut icon" type="image/png" href="{% static 'favicon.ico' %}" />
         <link
             rel="stylesheet"
             href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css"
@@ -19,13 +19,13 @@
             integrity="sha384-B4gt1jrGC7Jh4AgTPSdUtOBvfO8shuf57BaghqFfPlYxofvL8/KUEfYiJOMMV+rV"
             crossorigin="anonymous"
         ></script>
-        
+        <link rel="stylesheet" type="text/css" href="/static/base.css/" />
     </head>
 
     <body>
         <nav class="navbar navbar-expand-md navbar-light">
-            <div class="container">
-                <button
+            <div class="container-fluid">
+                <!-- <button
                     class="navbar-toggler"
                     type="button"
                     data-toggle="collapse"
@@ -35,54 +35,62 @@
                     aria-label="Toggle navigation"
                 >
                     <span class="navbar-toggler-icon"></span>
-                </button>
+                </button> -->
                 <div class="navbar-brand">
                     <a href="/" class="navbar-brand">
                         Haley.gg
                     </a>
                 </div>
-                <div class="navbar-collapse collapse" id="navbarNav">
-                    <ul class="navbar-nav">
-                        <li class="nav-item">
-                            <a href="/match/" 
-                               class="nav-link {% block nav-match %}{% endblock nav-match %}"
-                           >전적</a>
-                        </li>
-                        <li class="nav-item">
-                            <a href="/map/" 
-                               class="nav-link {% block nav-map %}{% endblock nav-map %}"
-                           >맵</a>
-                        </li>
-                        <li class="nav-item">
-                            <a href="/proleague/" 
-                               class="nav-link {% block nav-proleague %}{% endblock nav-proleague %}"
-                           >프로리그</a>
-                        </li>
-                        <li class="nav-item">
-                            <a href="/rank/" 
-                               class="nav-link {% block nav-rank %}{% endblock nav-rank %}"
-                           >랭킹</a>
-                        </li>
-                        <li class="nav-item">
-                            <a href="/compare/" 
-                               class="nav-link {% block nav-compare %}{% endblock nav-compare %}"
-                           >전적비교</a>
-                        </li>
-                    </ul>
-                </div>
-                {% block nav-search %}{% endblock nav-search %}
             </div>
         </nav>
         <div class="content container">
-                {% block content %}{% endblock %}
+            <div class="row flex-nowrap">
+                <div class="col-3 bd-sidebar p-3">
+                    <ul class="nav nav-pills nav-stacked">
+                        <li class="nav-item">
+                            <a
+                                class="nav-link {% block nav-match %}{% endblock nav-match %}"
+                                href="/match/"
+                                >전적</a
+                            >
+                        </li>
+                        <li class="nav-item">
+                            <a
+                                class="nav-link {% block nav-map %}{% endblock nav-map %}"
+                                href="/map/"
+                                >맵</a
+                            >
+                        </li>
+                        <li class="nav-item">
+                            <a
+                                class="nav-link {% block nav-rank %}{% endblock nav-rank %}"
+                                href="/rank/"
+                                >랭킹</a
+                            >
+                        </li>
+                        <li class="nav-item">
+                            <a
+                                class="nav-link {% block nav-proleague %}{% endblock nav-proleague %}"
+                                href="/proleague/"
+                                >프로리그</a
+                            >
+                        </li>
+                        <li class="nav-item">
+                            <a
+                                class="nav-link {% block nav-compare %}{% endblock nav-compare %}"
+                                href="/compare/"
+                                >비교</a
+                            >
+                        </li>
+                    </ul>
+                </div>
+                <div class="col-9">
+                    {% block content %}{% endblock content %}
+                </div>
+            </div>
         </div>
         <footer class="page-footer text-center m-3">
             This is footer.
         </footer>
-        <link 
-                rel="stylesheet"
-                type="text/css"
-                href="/static/base.css/"
-            />
     </body>
 </html>

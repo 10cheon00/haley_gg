@@ -1,4 +1,6 @@
-{% extends 'Rank/base-rank.html' %}{% block content %}
+{% extends 'base.html' %}
+{% block nav-rank %}active{% endblock %}
+{% block content %}
 <div class="row p-3">
     <div class="col-md-2">
         {% for user in total_matches %} {{ user.name }} | {{ user.total_matches }}<br />
@@ -12,9 +14,8 @@
     </div>
     <div class="col-md">
         {% for data in streak_queryset %}
-            <!-- last_defeat : {{ data.last_defeat }}, id : {{ data.id }}, user_id : {{ data.user_id }}-->
-            <br/>
             streak : {{ data.streak }} | user : {{ data.user }}
+            <br/>
         {% endfor %}
         <!-- {% for user, value in q.items %} 
             {{ user }} | {{ value }}
