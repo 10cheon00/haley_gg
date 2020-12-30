@@ -6,7 +6,6 @@ ALLOWED_HOSTS += ['*']
 
 INSTALLED_APPS += [
     'haleyStats.Apps.haley_gg.apps.HaleyGgConfig',
-    'bootstrap4',
     'debug_toolbar',
 ]
 

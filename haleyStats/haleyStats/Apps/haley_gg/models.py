@@ -2,26 +2,18 @@
 from django.db import models
 from django.db.models import (
     Count,
-    Sum,
-    Case,
-    When,
-    Max,
-    F,
     Q,
     Subquery,
     OuterRef,
-    Value,
 )
-from django.db.models.functions import Coalesce
-from django.db.models import Window
 from django.utils import timezone
 from django.urls import reverse
 
+from .manager import MeleePlayerManager
 from .manager import MeleeMatchManager
 from .manager import TeamMatchManager
-from .manager import MeleePlayerManager
-from .utils import get_match_data_from_match_list
-from .utils import get_streak_count
+# from .utils import get_match_data_from_match_list
+# from .utils import get_streak_count
 
 race_list = (
     ('T', 'Terran'),
@@ -133,7 +125,7 @@ class User(models.Model):
         return ''.join(string)
 
     def get_user_melee_data(self, opponent_name=None):
-        queryset = Player.melee.all()
+        queryset = Player.melee.select_related('match__league', 'match__map').all()
         # defer로 원하는 field만 가져오도록 하는 방법이 있다.
         # 그런데 그렇게 하니까 더 딜레이가 걸린다.
         # 왜 그런지는 잘 모르겠다...만 loop최적화를 해야할 것 같다.
@@ -236,22 +228,6 @@ class User(models.Model):
         # annotate(A).annotate(B)
         # A에서 만든건 B에서만 접근가능하다.
 
-        # q = Player.melee.annotate(
-        #     last_defeat=Window(
-        #         expression=Max(
-        #             'id',
-        #             filter=Q(is_win=False)
-        #         ),
-        #         partition_by=F('user'),
-        #         order_by=[F('user').asc()]
-        #     )
-        # )
-
-        # q = Player.melee.filter(
-        #     Q(user=OuterRef('user')) &
-        #     Q(is_win=False)
-        # ).order_by('-id')
-
         streak_queryset = Player.melee.values('user').order_by('user').annotate(
             streak=Count(
                 'id',
@@ -264,6 +240,7 @@ class User(models.Model):
                 )
             )
         ).values('user', 'streak').order_by('user').filter(streak__gt=0)
+        rank_data_dict['streak_queryset'] = streak_queryset[:100]
 
         # player_queryset = Player.melee.all()
         # streak_rank = {}
@@ -275,13 +252,11 @@ class User(models.Model):
         # rank_data_dict['q'] = streak_rank
         # 뭔 짓을 해도 3초이상 걸린다 왜그럴까..
 
-        # 제일 마지막으로 진 값 위로는 1이 저장되어 있음
         # group by는 열들을 모아서 집계를 한다. 하지만 partition by는 열을 모으지 않고
         # 집계값만 각 열에 넣어준다.
 
         # rank_data_dict['queryset'] = queryset[300:600]
         # rank_data_dict['streak_queryset'] = last_defeat_queryset[:100]
-        rank_data_dict['streak_queryset'] = streak_queryset[:100]
         return rank_data_dict
 
 
@@ -293,8 +268,7 @@ class Map(models.Model):
 
     # map files(ex: .scx, .scm, or zip files)
     file = models.FileField(
-        upload_to="Maps/files/",
-        blank=True)
+        upload_to="Maps/files/")
 
     # map images
     image = models.ImageField(
@@ -435,19 +409,24 @@ class Match(models.Model):
         verbose_name="리그",
         related_name='match')
 
-    # Round, dual tournament or something like that. Seems like game title
-    # ex. Round 1, 16강 A조 ... etc
-    name = models.CharField(
+    # Round, dual tournament or something like that. Seems like game title.
+    # ex. Round 1, top 16, day 3, final... etc
+    round = models.CharField(
         max_length=100,
         default="",
-        verbose_name="매치 제목")
+        verbose_name="라운드")
 
-    # Disabled.
-    # # additional description such as set, ace match, winner's match etc ...
-    # description = models.CharField(
-    #     max_length=50,
-    #     default="",
-    #     verbose_name="매치 부제목")
+    # group name
+    # In proleague, this field same as team vs team.
+    group = models.CharField(
+        max_length=100,
+        default="",
+        verbose_name="그룹")
+
+    # match set
+    set = models.PositiveIntegerField(
+        default=0,
+        verbose_name="세트")
 
     # match date
     date = models.DateField(
@@ -486,7 +465,8 @@ class Match(models.Model):
     class Meta:
         ordering = [
             '-date',
-            '-name',
+            '-round',
+            '-set',
             '-id',
         ]
 
@@ -507,195 +487,195 @@ class Match(models.Model):
         string.append(str(self.name))
         return string
 
-    @classmethod
-    def create_data_from_sheet(cls, doc):
-        # Google Spreadsheet warn you 'read requests per user per 100 seconds'
-        # So i bring all data at once.
+    # @classmethod
+    # def create_data_from_sheet(cls, doc):
+    #     # Google Spreadsheet warn you 'read requests per user per 100 seconds'
+    #     # So i bring all data at once.
 
-        #
-        # Managing melee data.
-        #
-        melee_sheet = doc.worksheet('개인전적Data')
-        match_data_list = melee_sheet.get_all_values()
-        match_length = len(match_data_list)
-        # Loops from last of exist data to last of new data.
-        # Only counts if match type isn't top and bottom.
+    #     #
+    #     # Managing melee data.
+    #     #
+    #     melee_sheet = doc.worksheet('개인전적Data')
+    #     match_data_list = melee_sheet.get_all_values()
+    #     match_length = len(match_data_list)
+    #     # Loops from last of exist data to last of new data.
+    #     # Only counts if match type isn't top and bottom.
 
-        remark_dict = {
-            '기권': '기권 경기',
-            '몰수': '몰수 경기',
-            '에이스': '에이스 결정전',
-        }
-        for i in range(
-            Match.melee.count() * 2 + 1,
-            match_length,
-            2
-        ):
-            match_data = match_data_list[i]
-            match_info_dict = get_match_data_from_match_list(match_data)
+    #     remark_dict = {
+    #         '기권': '기권 경기',
+    #         '몰수': '몰수 경기',
+    #         '에이스': '에이스 결정전',
+    #     }
+    #     for i in range(
+    #         Match.melee.count() * 2 + 1,
+    #         match_length,
+    #         2
+    #     ):
+    #         match_data = match_data_list[i]
+    #         match_info_dict = get_match_data_from_match_list(match_data)
 
-            # date
-            date = match_info_dict['date']
+    #         # date
+    #         date = match_info_dict['date']
 
-            # League
-            league_name = match_info_dict['league_name']
-            league_type = match_info_dict['league_type']
-            league, created = League.objects.get_or_create(
-                name__iexact=league_name,
-                defaults={
-                    'name': league_name,
-                    'type': league_type,
-                })
-            # name
-            name = match_info_dict['name']
+    #         # League
+    #         league_name = match_info_dict['league_name']
+    #         league_type = match_info_dict['league_type']
+    #         league, created = League.objects.get_or_create(
+    #             name__iexact=league_name,
+    #             defaults={
+    #                 'name': league_name,
+    #                 'type': league_type,
+    #             })
+    #         # name
+    #         name = match_info_dict['name']
 
-            # Map
-            map, created = Map.objects.get_or_create(
-                name=match_data[6],
-                defaults={
-                })
+    #         # Map
+    #         map, created = Map.objects.get_or_create(
+    #             name=match_data[6],
+    #             defaults={
+    #             })
 
-            # remark
-            remark = ""
-            try:
-                # if match is abstention...
-                remark = match_data[13] or match_data[12]
-            except IndexError:
-                remark = ""
+    #         # remark
+    #         remark = ""
+    #         try:
+    #             # if match is abstention...
+    #             remark = match_data[13] or match_data[12]
+    #         except IndexError:
+    #             remark = ""
 
-            if remark in remark_dict:
-                remark = remark_dict[remark]
-            else:
-                remark = ""
+    #         if remark in remark_dict:
+    #             remark = remark_dict[remark]
+    #         else:
+    #             remark = ""
 
-            # Create Match data.
-            match = Match.objects.create(
-                league=league,
-                name=name,
-                date=date,
-                map=map,
-                remark=remark,
-                type='one_on_one')
+    #         # Create Match data.
+    #         match = Match.objects.create(
+    #             league=league,
+    #             name=name,
+    #             date=date,
+    #             map=map,
+    #             remark=remark,
+    #             type='one_on_one')
 
-            # Players
-            player_1_name = match_data[2]
-            player_1_race = match_data[3].upper()
-            player_2_name = match_data[4]
-            player_2_race = match_data[5].upper()
-            player_1, created = User.objects.get_or_create(
-                name__iexact=player_1_name,
-                defaults={
-                    'name': player_1_name,
-                    'most_race': player_1_race,
-                })
-            player_2, created = User.objects.get_or_create(
-                name__iexact=player_2_name,
-                defaults={
-                    'name': player_2_name,
-                    'most_race': player_2_race,
-                })
-            if match_data[7].lower() == player_1_name.lower():
-                target_data = [player_1,        # winner
-                               player_1_race,
-                               player_2,        # loser
-                               player_2_race]
-            else:
-                target_data = [player_2,
-                               player_2_race,
-                               player_1,
-                               player_1_race]
-            is_win = True if match_data[8] == '승' else False
+    #         # Players
+    #         player_1_name = match_data[2]
+    #         player_1_race = match_data[3].upper()
+    #         player_2_name = match_data[4]
+    #         player_2_race = match_data[5].upper()
+    #         player_1, created = User.objects.get_or_create(
+    #             name__iexact=player_1_name,
+    #             defaults={
+    #                 'name': player_1_name,
+    #                 'most_race': player_1_race,
+    #             })
+    #         player_2, created = User.objects.get_or_create(
+    #             name__iexact=player_2_name,
+    #             defaults={
+    #                 'name': player_2_name,
+    #                 'most_race': player_2_race,
+    #             })
+    #         if match_data[7].lower() == player_1_name.lower():
+    #             target_data = [player_1,        # winner
+    #                            player_1_race,
+    #                            player_2,        # loser
+    #                            player_2_race]
+    #         else:
+    #             target_data = [player_2,
+    #                            player_2_race,
+    #                            player_1,
+    #                            player_1_race]
+    #         is_win = True if match_data[8] == '승' else False
 
-            Player.objects.create(
-                match=match,
-                user=target_data[0],
-                is_win=is_win,
-                race=target_data[1])
-            Player.objects.create(
-                match=match,
-                user=target_data[2],
-                is_win=False if is_win else True,
-                race=target_data[3])
+    #         Player.objects.create(
+    #             match=match,
+    #             user=target_data[0],
+    #             is_win=is_win,
+    #             race=target_data[1])
+    #         Player.objects.create(
+    #             match=match,
+    #             user=target_data[2],
+    #             is_win=False if is_win else True,
+    #             race=target_data[3])
 
-        #
-        # Managing top and bottom data.
-        #
-        teamplay_sheet = doc.worksheet('팀플전적Data')
-        match_result_list = teamplay_sheet.get_all_values()
-        match_length = len(match_result_list)
-        # Only counts if match type isn't top and bottom.
-        for i in range(
-            Match.team.count() * 6 + 1,
-            match_length,
-            6
-        ):
-            match_result = match_result_list[i]
-            match_info_dict = get_match_data_from_match_list(match_result)
+    #     #
+    #     # Managing top and bottom data.
+    #     #
+    #     teamplay_sheet = doc.worksheet('팀플전적Data')
+    #     match_result_list = teamplay_sheet.get_all_values()
+    #     match_length = len(match_result_list)
+    #     # Only counts if match type isn't top and bottom.
+    #     for i in range(
+    #         Match.team.count() * 6 + 1,
+    #         match_length,
+    #         6
+    #     ):
+    #         match_result = match_result_list[i]
+    #         match_info_dict = get_match_data_from_match_list(match_result)
 
-            # date
-            date = match_info_dict['date']
+    #         # date
+    #         date = match_info_dict['date']
 
-            # League
-            league_name = match_info_dict['league_name']
-            league_type = match_info_dict['league_type']
-            league, created = League.objects.get_or_create(
-                name__iexact=league_name,
-                defaults={
-                    'name': league_name,
-                    'type': league_type,
-                })
-            # name
-            name = match_info_dict['name']
+    #         # League
+    #         league_name = match_info_dict['league_name']
+    #         league_type = match_info_dict['league_type']
+    #         league, created = League.objects.get_or_create(
+    #             name__iexact=league_name,
+    #             defaults={
+    #                 'name': league_name,
+    #                 'type': league_type,
+    #             })
+    #         # name
+    #         name = match_info_dict['name']
 
-            # Map
-            map, created = Map.objects.get_or_create(
-                name=match_result[8],
-                defaults={
-                })
+    #         # Map
+    #         map, created = Map.objects.get_or_create(
+    #             name=match_result[8],
+    #             defaults={
+    #             })
 
-            # remark
-            remark = ""
-            try:
-                # if match is abstention...
-                remark = match_result[14]
-            except IndexError:
-                remark = ""
+    #         # remark
+    #         remark = ""
+    #         try:
+    #             # if match is abstention...
+    #             remark = match_result[14]
+    #         except IndexError:
+    #             remark = ""
 
-            if remark in remark_dict:
-                remark = remark_dict[remark]
-            else:
-                remark = ""
+    #         if remark in remark_dict:
+    #             remark = remark_dict[remark]
+    #         else:
+    #             remark = ""
 
-            # Create Match data.
-            match = Match.objects.create(
-                league=league,
-                name=name,
-                date=date,
-                map=map,
-                remark=remark,
-                type='top_and_bottom')
+    #         # Create Match data.
+    #         match = Match.objects.create(
+    #             league=league,
+    #             name=name,
+    #             date=date,
+    #             map=map,
+    #             remark=remark,
+    #             type='top_and_bottom')
 
-            # Players
-            # race does not matter
-            player_race = ''
-            for i in range(2, 8):
-                if i < 5:
-                    is_win = True if match_result[9] in match_result[2:5] else False
-                else:
-                    is_win = True if match_result[9] in match_result[5:8] else False
+    #         # Players
+    #         # race does not matter
+    #         player_race = ''
+    #         for i in range(2, 8):
+    #             if i < 5:
+    #                 is_win = True if match_result[9] in match_result[2:5] else False
+    #             else:
+    #                 is_win = True if match_result[9] in match_result[5:8] else False
 
-                player, created = User.objects.get_or_create(
-                    name__iexact=match_result[i],
-                    defaults={
-                        'name': match_result[i],
-                        'most_race': player_race,
-                    })
+    #             player, created = User.objects.get_or_create(
+    #                 name__iexact=match_result[i],
+    #                 defaults={
+    #                     'name': match_result[i],
+    #                     'most_race': player_race,
+    #                 })
 
-                Player.objects.create(
-                    match=match,
-                    user=player,
-                    is_win=is_win,
-                    race=player_race)
+    #             Player.objects.create(
+    #                 match=match,
+    #                 user=player,
+    #                 is_win=is_win,
+    #                 race=player_race)
 
 
 class Player(models.Model):

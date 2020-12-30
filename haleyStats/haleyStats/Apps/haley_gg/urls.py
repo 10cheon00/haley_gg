@@ -12,7 +12,7 @@ urlpatterns += [
     path('map/',
          views.MapListView.as_view(),
          name="maps_list"),
-    path('map/new-map/',
+    path('map/new/',
          views.CreateMapView.as_view(),
          name="maps_create"),
     # path('map/new-map-type/',
@@ -53,6 +53,12 @@ urlpatterns += [
     path('match/load-sheet/',
          views.MatchLoadSheetView.as_view(),
          name="match_load_data"),
+    path('match/new/one_on_one',
+         views.CreateOneOnOneMatchView.as_view(),
+         name="match_create"),
+    path('match/new/top_and_bottom',
+         views.CreateTopAndBottomMatchView.as_view(),
+         name="match_create"),
 ]
 
 # compare.urls

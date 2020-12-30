@@ -22,6 +22,8 @@ from .forms import CreateUserForm
 from .forms import UpdateUserForm
 from .forms import MatchSheetForm
 from .forms import CompareForm
+from .forms import OneOnOneMatchForm
+from .forms import TopAndBottomMatchForm
 from .utils import get_spreadsheet
 
 
@@ -135,10 +137,20 @@ class MatchListView(ListView):
     model = Match
     queryset = Match.melee.prefetch_related(
         'player_set',
-        'player_set__user' # holy!
+        'player_set__user'  # holy!
     ).select_related(
         'league', 'map'
     )
+
+
+class CreateOneOnOneMatchView(CreateView):
+    template_name = "Stats/create-match.html"
+    form_class = OneOnOneMatchForm
+
+
+class CreateTopAndBottomMatchView(CreateView):
+    template_name = "Stats/create-match.html"
+    form_class = TopAndBottomMatchForm
 
 
 class MatchLoadSheetView(FormView):
