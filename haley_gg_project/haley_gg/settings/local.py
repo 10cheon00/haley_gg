@@ -5,7 +5,8 @@ DEBUG = True
 ALLOWED_HOSTS += ['*']
 
 INSTALLED_APPS += [
-    'haleyStats.Apps.haley_gg.apps.HaleyGgConfig',
+    # 'Stats',
+    'haley_gg.Apps.Stats',
     'debug_toolbar',
 ]
 

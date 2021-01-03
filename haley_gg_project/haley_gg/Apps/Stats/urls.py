@@ -3,7 +3,7 @@ from django.urls import path
 from . import views
 
 
-app_name = 'haley_gg'
+app_name = 'haley_gg.Apps.Stats'
 
 urlpatterns = []
 
@@ -15,9 +15,6 @@ urlpatterns += [
     path('map/new/',
          views.CreateMapView.as_view(),
          name="maps_create"),
-    # path('map/new-map-type/',
-    #      views.MapCreateView.as_view(),
-    #      name="maps_create"),
     path('map/<str:name>/',
          views.DetailMapView.as_view(),
          name="maps_detail"),
@@ -53,10 +50,10 @@ urlpatterns += [
     path('match/load-sheet/',
          views.MatchLoadSheetView.as_view(),
          name="match_load_data"),
-    path('match/new/one_on_one',
+    path('match/new/one_on_one/',
          views.CreateOneOnOneMatchView.as_view(),
          name="match_create"),
-    path('match/new/top_and_bottom',
+    path('match/new/top_and_bottom/',
          views.CreateTopAndBottomMatchView.as_view(),
          name="match_create"),
 ]
