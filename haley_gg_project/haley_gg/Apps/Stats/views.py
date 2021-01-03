@@ -1,4 +1,4 @@
-# haley_gg/views.py
+# stats/views.py
 from django.shortcuts import get_object_or_404
 from django.shortcuts import render
 from django.urls import reverse
@@ -83,7 +83,7 @@ class DeleteMapView(SelectMapMixin, DeleteView):
     model = Map
 
     def get_success_url(self):
-        return reverse('haley_gg:maps_list')
+        return reverse('stats:maps_list')
 
 
 # Select a user object with a name keyword.

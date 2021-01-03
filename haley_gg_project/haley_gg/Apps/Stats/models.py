@@ -50,7 +50,7 @@ class User(models.Model):
         return self.name
 
     def get_absolute_url(self):
-        return reverse("haley_gg:users_detail", kwargs={"name": self.name})
+        return reverse("stats:users_detail", kwargs={"name": self.name})
 
     # Return win rate no matter of player's race.
     def get_winning_rate(self):
@@ -286,7 +286,7 @@ class Map(models.Model):
         return self.name
 
     def get_absolute_url(self):
-        return reverse('haley_gg:maps_detail', kwargs={"name": self.name})
+        return reverse('stats:maps_detail', kwargs={"name": self.name})
 
     # Count matches related this map.
     # def update_match_count(self):
@@ -475,7 +475,7 @@ class Match(models.Model):
         return ''.join(str)
 
     def get_absolute_url(self, **kwargs):
-        return reverse('haley_gg:match_list')
+        return reverse('stats:match_list')
 
     # Return match name in list type.
     def get_name(self):
