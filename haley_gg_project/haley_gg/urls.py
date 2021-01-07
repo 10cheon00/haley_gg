@@ -20,13 +20,13 @@ from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
 
-from . import views
+from haley_gg import views
 
 urlpatterns = [
     path('__debug__/', include(debug_toolbar.urls)),
     path('', views.main_page, name="main_page"),
     path('admin/', admin.site.urls),
-    path('', include("haley_gg.Apps.Stats.urls", namespace="Stats")),
+    path('', include("haley_gg.apps.stats.urls", namespace="stats")),
 ]
 urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 # ???

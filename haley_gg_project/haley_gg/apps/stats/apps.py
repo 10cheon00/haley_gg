@@ -2,5 +2,5 @@ from django.apps import AppConfig
 
 
 class StatsConfig(AppConfig):
-    name = 'Stats'
-    verbose_name = 'Stats'
+    name = 'stats'
+    verbose_name = 'stats'

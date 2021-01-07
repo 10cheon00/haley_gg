@@ -69,5 +69,5 @@ urlpatterns += [
 urlpatterns += [
     path('rank/',
          views.RankView.as_view(),
-         name="ranks"),
+         name="rank"),
 ]

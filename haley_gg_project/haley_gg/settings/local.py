@@ -6,7 +6,8 @@ ALLOWED_HOSTS += ['*']
 
 INSTALLED_APPS += [
     # 'Stats',
-    'haley_gg.Apps.Stats',
+    # 'haley_gg.apps.stats',
+    'haley_gg.apps.results',
     'debug_toolbar',
 ]
 
