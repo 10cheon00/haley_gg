@@ -2,6 +2,7 @@
     <head>
         <title>Haley.gg</title>
         {% load static %}
+        {% block header %}
         <link rel="shortcut icon" type="image/png" href="{% static 'favicon.ico' %}" />
         <link
             rel="stylesheet"
@@ -19,12 +20,13 @@
             integrity="sha384-B4gt1jrGC7Jh4AgTPSdUtOBvfO8shuf57BaghqFfPlYxofvL8/KUEfYiJOMMV+rV"
             crossorigin="anonymous"
         ></script>
+        {% endblock header %}
         <link rel="stylesheet" type="text/css" href="/static/base.css/" />
     </head>
 
     <body>
-        <nav class="navbar navbar-expand-lg">
-            <div class="container-fluid">
+        <nav class="navbar navbar-expand-lg bg-light">
+            <div class="container">
                 <a class="navbar-brand" href="{% url 'main_page' %}">Haley.gg</a>
                 <button
                     class="navbar-toggler"
@@ -38,8 +40,10 @@
                     <span class="navbar-toggler-icon"></span>
                 </button>
                 <div class="collapse navbar-collapse" id="navbarNavAltMarkup">
-                    <div class="navbar-nav">
-                        <a class="nav-link" href="{% url 'results:new_result' %}">전적 추가</a>
+                    <div class="nav nav-pills">
+                        <a class="nav-link nav-item 
+                                  {% block active_result %}{% endblock active_result %}" 
+                           href="{% url 'stats:result_list' %}">전적보기</a>
                     </div>
                 </div>
             </div>

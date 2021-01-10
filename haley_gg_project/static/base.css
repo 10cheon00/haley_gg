@@ -6,31 +6,3 @@ a:hover {
     text-decoration: none;
     color: grey;
 }
-
-.content{
-    background-color:#dadada;
-    height: auto;
-}
-.navbar{
-    background-color:#FFB291;
-    border-bottom:0px;
-}
-
-.navbar-nav > li > a.active {
-    background-color: #FF6F30!important;
-}
-
-.bd-sidebar .nav {
-  display: block;
-}
-
-.bd-sidebar {
-  position: sticky;
-  top: 4rem;
-  z-index: 1000;
-  background: #eee;
-  border-right: 1px solid rgba(0,0,0,.1);
-  overflow-y: auto;
-  min-width: 160px;
-  max-width: 220px;
-}

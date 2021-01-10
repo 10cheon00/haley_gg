@@ -1,0 +1,26 @@
+{% extends 'base.html' %} {% block content %} {% load static %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.4.0/Chart.min.js"
+></script>
+<link rel="stylesheet" href="{% static 'User/detail.css' %}" />
+<script type="text/javascript" src="{% static 'User/chart.js' %}"></script>
+
+
+<div class="profile">
+    <div class="jumbotron rounded-0 text-light {{ user.most_race }}">
+        <h1 class="jumbotron-heading">
+            <img class="icon rounded-circle {{ user.most_race }}" />
+            {{ user.name }}
+            <span class="h4 text-secondary">({{ user.most_race }})</span>
+        </h1>
+        <h3></h3>
+        <small class="text-secondary">{{ user.joined_date }}에 가입</small>
+    </div>
+    <hr>
+    <div class="h2 m-3">커리어</div>
+    <div class="jumbotron rounded-0 ">
+        {{ user.career }}
+    </div>
+</div>
+<hr>
+
+{% endblock content %}

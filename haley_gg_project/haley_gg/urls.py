@@ -26,7 +26,7 @@ urlpatterns = [
     path('__debug__/', include(debug_toolbar.urls)),
     path('', views.main_page, name="main_page"),
     path('admin/', admin.site.urls),
-    path('', include("haley_gg.apps.stats.urls", namespace="stats")),
+    path('stats/', include("haley_gg.apps.stats.urls", namespace="stats")),
 ]
 urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 # ???
