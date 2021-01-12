@@ -72,6 +72,11 @@ class Result(models.Model):
         default='',
         max_length=100)
 
+    description = models.CharField(
+        default='',
+        max_length=100,
+        blank=True)
+
     map = models.ForeignKey(
         Map,
         on_delete=models.CASCADE)
@@ -104,6 +109,24 @@ class Result(models.Model):
         ordering = [
             'date',
             'match_name',
-            'id',
+            'description',
             'win_state',
         ]
+
+    def __str__(self):
+        str_list = []
+        str_list.append(str(self.date))
+        str_list.append(' | ')
+        str_list.append(str(self.league))
+        str_list.append(' ')
+        str_list.append(self.match_name)
+        str_list.append(' ')
+        str_list.append(self.description)
+        str_list.append(' ')
+        str_list.append(str(self.map))
+        str_list.append(' | ')
+        str_list.append(str(self.player))
+        str_list.append(' (')
+        str_list.append(self.race)
+        str_list.append(')')
+        return ''.join(str_list)

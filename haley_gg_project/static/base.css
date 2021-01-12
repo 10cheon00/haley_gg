@@ -6,3 +6,10 @@ a:hover {
     text-decoration: none;
     color: grey;
 }
+body {
+    background-color:#dddddd;
+}
+
+body > .container {
+    background-color:#ffffff;
+}

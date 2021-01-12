@@ -10,11 +10,73 @@
 {% endblock header %} 
 
 {% block content %}
-<form method="POST">
-    {{ form.as_p }}
+<form method="POST" class="need-validations">
+    {% csrf_token %}
+    {{ formset.management_form }}
+    {% for form in formset %}
+    <div class="form-row">
+        {% for field in form %}
+            <div class="form-group col">
+                {{ field.errors }}
+                {{ field.label_tag }}
+                {{ field }}
+            </div>
+        {% endfor %}
+    </div>
+    {% endfor %}
     <button class="btn btn-success" type="submit">
         Save
     </button>
 </form>
+<!-- <form method="POST">
+    {% csrf_token %}
+    <div class="form-row">
+        <div class="col-form-label">{{ form.date.label }}</div>
+        <div class="form-group col">
+            {{ form.date.error }}
+            {{ form.date }}
+        </div>
+        <div class="col-form-label">{{ form.league.label }}</div>
+        <div class="form-group col">
+            {{ form.league.error }}
+            {{ form.league }}
+        </div>
+        <div class="col-form-label">{{ form.match_name.label }}</div>
+        <div class="form-group col-md-6">
+            {{ form.match_name.error }}
+            {{ form.match_name }}
+        </div>
+    </div>
+    <div class="form-row">
+        {{ form.map.label_tag }}
+        <div class="form-group col">
+            {{ form.map.error }}
+            {{ form.map }}
+        </div>
+        {{ form.type.label_tag }}
+        <div class="form-group col">
+            {{ form.type.error }}
+            {{ form.type }}
+        </div>
+        {{ form.player.label_tag }}
+        <div class="form-group col">
+            {{ form.player.error }}
+            {{ form.player }}
+        </div>
+        {{ form.race.label_tag }}
+        <div class="form-group col">
+            {{ form.race.error }}
+            {{ form.race }}
+        </div>
+        <div class="form-group col">
+            {{ form.win_state.error }}
+            {{ form.win_state.label_tag }}
+            {{ form.win_state }}
+        </div>
+    </div>
+    <button class="btn btn-success" type="submit">
+        Save
+    </button>
+</form> -->
     
 {% endblock content %}
