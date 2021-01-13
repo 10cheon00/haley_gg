@@ -1,32 +1,7 @@
 from django import forms
-from django.core.exceptions import ValidationError
-
+from django.forms import formset_factory
 from haley_gg.apps.stats.models import Player, Map, Result
 
-
-class PlayerResultDataFormSet(forms.BaseFormSet):
-    # 여기서는 플레이어 이름이 겹치는지만 확인하면 된다.
-    def clean(self):
-        super().clean()
-        for form in self.forms:
-            pass
-
-# basemodelformset에는 is_valid()가 없다.
-# baseformset에 있는데, 각 form을 돌면서 is_valid()를 호출한다.
-
-# form에서 is_valid()를 호출하면 full_clean()을 부른다는데 어디서 부르는지 못찾았다.
-# full_clean()에서는 clean_field(), clean_form(), post_clean() 순으로 부른단다.
-# 책이랑 설명이 다른데?
-
-# formset에도 full_clean()이 있다.
-# 각 form을 돌면서 달라진 점과 에러를 찾는다.
-# validation의 범위를 벗어날 경우 ValidationError를 뿜고 끝낸다.
-# 그렇지 않은 경우 clean()을 호출한다.
-# clean()은 pass처리되어 있는데, 모든 form 내부에서 clean()이 호출된 뒤에
-# hook한다는데, 의미를 잘 이해 못하겠다..
-
-# ModelFormSet에서 clean() 쓰는 방법
-# https://docs.djangoproject.com/en/3.1/topics/forms/modelforms/#overriding-clean-on-a-modelformset
 
 
 """
@@ -59,23 +34,73 @@ formset
 """
 
 
-class PlayerResultDataForm(forms.Form):
+class PlayerVersusPlayerDataForm(forms.Form):
     race_list = [
         ('T', 'Terran'),
         ('P', 'Protoss'),
         ('Z', 'Zerg'),
     ]
-
-    description = forms.CharField(max_length=100)
-    type = forms.ChoiceField(choices=[
+    # set or winner's match, etc ...
+    # this field is combined into match_name field in ResultForm.
+    description = forms.CharField(
+        max_length=100,
+        required=False
+    )
+    type = forms.ChoiceField(
+        choices=[
             ('melee', '밀리'),
             ('top_and_bottom', '팀플')
-        ])
-    winner = forms.ModelChoiceField(queryset=Player.objects.all())
+        ]
+    )
+    winner = forms.ModelChoiceField(
+        queryset=Player.objects.all(),
+        widget=forms.Select(
+            attrs={
+                'class': 'form-control'
+            }
+        )
+    )
     winner_race = forms.ChoiceField(choices=race_list)
     map = forms.ModelChoiceField(queryset=Map.objects.all())
     loser = forms.ModelChoiceField(queryset=Player.objects.all())
     loser_race = forms.ChoiceField(choices=race_list)
+
+    def clean(self):
+        cleaned_data = super().clean()
+
+        # Check that winner is same as loser.
+        winner = cleaned_data['winner']
+        loser = cleaned_data['loser']
+        if winner.name == loser.name:
+            error_msg = '선택한 플레이어 이름이 같습니다.'
+            self.add_error('winner', error_msg)
+            self.add_error('loser', error_msg)
+
+        return cleaned_data
+
+
+class PlayerVersusPlayerDataFormSet(forms.BaseFormSet):
+    def clean(self):
+        super().clean()
+
+        # When grouped by descriptions, Check that types are same.
+        type_dict = {}
+        for form in self.forms:
+            type = form.cleaned_data['type']
+            description = form.cleaned_data['description']
+            if description not in type_dict.keys():
+                type_dict[description] = type
+            else:
+                if type_dict[description] != type:
+                    error_msg = '한 경기 내의 경기 타입이 서로 다릅니다.'
+                    form.add_error('type', error_msg)
+
+
+def get_player_versus_player_data_formset():
+    return formset_factory(
+        form=PlayerVersusPlayerDataForm,
+        extra=2,
+    )
 
 
 class ResultForm(forms.ModelForm):
@@ -91,15 +116,14 @@ class ResultForm(forms.ModelForm):
                 attrs={
                     'type': 'date',
                     'class': 'form-control'
-                }),
+                }
+            ),
             'league': forms.Select(
-                attrs={
-                    'class': 'form-control'
-                }),
+                attrs={'class': 'form-control'}
+            ),
             'match_name': forms.TextInput(
-                attrs={
-                    'class': 'form-control'
-                }),
+                attrs={'class': 'form-control'}
+            ),
         }
         labels = {
             'date': '날짜',
@@ -112,10 +136,6 @@ class ResultForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-
-    def clean(self):
-        super().clean()
-        pass
 
     # save with formset data.
     def save(self, formset):

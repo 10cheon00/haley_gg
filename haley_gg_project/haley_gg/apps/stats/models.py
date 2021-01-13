@@ -5,7 +5,8 @@ from django.utils import timezone
 class Player(models.Model):
     name = models.CharField(
         default='',
-        max_length=50)
+        max_length=50
+    )
 
     most_race = models.CharField(
         default='',
@@ -15,10 +16,10 @@ class Player(models.Model):
             ('P', 'Protoss'),
             ('Z', 'Zerg'),
             ('R', 'Random'),
-        ))
+        )
+    )
 
-    joined_date = models.DateField(
-        default=timezone.now)
+    joined_date = models.DateField(default=timezone.now)
 
     class Meta:
         ordering = ['name']
@@ -30,7 +31,8 @@ class Player(models.Model):
 class League(models.Model):
     name = models.CharField(
         default='',
-        max_length=50)
+        max_length=50
+    )
 
     type = models.CharField(
         default='',
@@ -39,7 +41,8 @@ class League(models.Model):
             ('proleague', '프로리그'),
             ('starleague', '스타리그'),
             ('otherleague', '그외 리그'),
-        ))
+        )
+    )
 
     class Meta:
         ordering = ['name']
@@ -51,7 +54,8 @@ class League(models.Model):
 class Map(models.Model):
     name = models.CharField(
         default='',
-        max_length=50)
+        max_length=50
+    )
 
     class Meta:
         ordering = ['name']
@@ -61,21 +65,17 @@ class Map(models.Model):
 
 
 class Result(models.Model):
-    date = models.DateField(
-        default=timezone.now)
+    date = models.DateField(default=timezone.now)
 
     league = models.ForeignKey(
         League,
-        on_delete=models.CASCADE)
+        on_delete=models.CASCADE
+    )
 
     match_name = models.CharField(
         default='',
-        max_length=100)
-
-    description = models.CharField(
-        default='',
-        max_length=100,
-        blank=True)
+        max_length=100
+    )
 
     map = models.ForeignKey(
         Map,
@@ -87,11 +87,13 @@ class Result(models.Model):
         choices=(
             ('melee', '밀리'),
             ('top_and_bottom', '팀플')
-        ))
+        )
+    )
 
     player = models.ForeignKey(
         Player,
-        on_delete=models.CASCADE)
+        on_delete=models.CASCADE
+    )
 
     race = models.CharField(
         default='',
@@ -100,16 +102,15 @@ class Result(models.Model):
             ('T', 'Terran'),
             ('P', 'Protoss'),
             ('Z', 'Zerg'),
-        ))
+        )
+    )
 
-    win_state = models.BooleanField(
-        default=False)
+    win_state = models.BooleanField(default=False)
 
     class Meta:
         ordering = [
             'date',
             'match_name',
-            'description',
             'win_state',
         ]
 
@@ -120,8 +121,6 @@ class Result(models.Model):
         str_list.append(str(self.league))
         str_list.append(' ')
         str_list.append(self.match_name)
-        str_list.append(' ')
-        str_list.append(self.description)
         str_list.append(' ')
         str_list.append(str(self.map))
         str_list.append(' | ')
