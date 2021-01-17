@@ -1,6 +1,9 @@
 from django import forms
 from django.forms import formset_factory
-from haley_gg.apps.stats.models import Player, Map, Result
+from django.core.exceptions import ValidationError
+from django.db.models import Count
+
+from haley_gg.apps.stats.models import Player, Map, Result, League
 
 
 
@@ -34,7 +37,7 @@ formset
 """
 
 
-class PlayerVersusPlayerDataForm(forms.Form):
+class PVPDataForm(forms.Form):
     race_list = [
         ('T', 'Terran'),
         ('P', 'Protoss'),
@@ -43,100 +46,210 @@ class PlayerVersusPlayerDataForm(forms.Form):
     # set or winner's match, etc ...
     # this field is combined into match_name field in ResultForm.
     description = forms.CharField(
+        label="세트",
         max_length=100,
-        required=False
-    )
-    type = forms.ChoiceField(
-        choices=[
-            ('melee', '밀리'),
-            ('top_and_bottom', '팀플')
-        ]
-    )
-    winner = forms.ModelChoiceField(
-        queryset=Player.objects.all(),
-        widget=forms.Select(
+        widget=forms.TextInput(
             attrs={
                 'class': 'form-control'
             }
-        )
+        ),
     )
-    winner_race = forms.ChoiceField(choices=race_list)
-    map = forms.ModelChoiceField(queryset=Map.objects.all())
-    loser = forms.ModelChoiceField(queryset=Player.objects.all())
-    loser_race = forms.ChoiceField(choices=race_list)
+    type = forms.ChoiceField(
+        label="게임 타입",
+        choices=[
+            ('melee', '밀리'),
+            ('top_and_bottom', '팀플')
+        ],
+        widget=forms.Select(
+            attrs={
+                'class': 'form-control',
+                # 'required': 'true'
+            },
+        ),
+    )
+    winner = forms.ModelChoiceField(
+        label="승자",
+        queryset=Player.objects.all(),
+        widget=forms.Select(
+            attrs={
+                'class': 'form-control',
+                # 'required': 'true'
+            }
+        ),
+    )
+    winner_race = forms.ChoiceField(
+        label="승자 종족",
+        choices=race_list,
+        widget=forms.Select(
+            attrs={
+                'class': 'form-control',
+                # 'required': 'true'
+            }
+        ),
+    )
+    map = forms.ModelChoiceField(
+        label='맵',
+        queryset=Map.objects.all(),
+        widget=forms.Select(
+            attrs={
+                'class': 'form-control',
+                # 'required': 'true'
+            }
+        ),
+    )
+    loser = forms.ModelChoiceField(
+        label="패자",
+        queryset=Player.objects.all(),
+        widget=forms.Select(
+            attrs={
+                'class': 'form-control',
+                # 'required': 'true'
+            }
+        ),
+    )
+    loser_race = forms.ChoiceField(
+        label="패자 종족",
+        choices=race_list,
+        widget=forms.Select(
+            attrs={
+                'class': 'form-control',
+                # 'required': 'true'
+            }
+        ),
+    )
+
+    # def __init__(self, *args, **kwargs):
+    #     super().__init__(*args, **kwargs)
+    #     self.fields
 
     def clean(self):
         cleaned_data = super().clean()
-
         # Check that winner is same as loser.
-        winner = cleaned_data['winner']
-        loser = cleaned_data['loser']
-        if winner.name == loser.name:
-            error_msg = '선택한 플레이어 이름이 같습니다.'
-            self.add_error('winner', error_msg)
-            self.add_error('loser', error_msg)
-
+        if not self.errors:
+            winner = cleaned_data.get('winner')
+            loser = cleaned_data.get('loser')
+            if winner.name == loser.name:
+                error_msg = '선택한 플레이어 이름이 같습니다.'
+                self.add_error('winner', error_msg)
+                self.add_error('loser', error_msg)
         return cleaned_data
 
 
-class PlayerVersusPlayerDataFormSet(forms.BaseFormSet):
+class PVPDataFormSet(forms.BaseFormSet):
     def clean(self):
         super().clean()
 
-        # When grouped by descriptions, Check that types are same.
-        type_dict = {}
+        # If formset have errors, pass cross form validation.
+        if self.total_error_count() > 0:
+            return
+
+        name_dict = {}
         for form in self.forms:
-            type = form.cleaned_data['type']
-            description = form.cleaned_data['description']
-            if description not in type_dict.keys():
-                type_dict[description] = type
-            else:
-                if type_dict[description] != type:
-                    error_msg = '한 경기 내의 경기 타입이 서로 다릅니다.'
-                    form.add_error('type', error_msg)
+            # Check that matches are already exist.
+            if Result.objects.filter(
+                date=form.cleaned_data.get('date'),
+                league=form.cleaned_data.get('league'),
+                match_name=form.cleaned_data.get('match_name')
+            ).exists():
+                error_msg = '이미 존재하는 경기 결과입니다.'
+                form.add_error('match_name', error_msg)
+
+            # Check that formset have duplicated match_name what form has.
+            # If same match_name is exist in formset,
+            # check that all type are top_and_bottom,
+            # and check that all map are equal.
+            description = form.cleaned_data.get('description')
+            # If description is empty, skip further progress.
+            if description:
+                if description in name_dict.keys():
+                    # This result already exists in formset.
+                    if form.cleaned_data.get('type') == 'melee':
+                        # This form's type is not top_and_bottom.
+                        error_msg = '같은 이름을 가진 경기의 타입이 서로 다릅니다.'
+                        form.add_error('type', error_msg)
+                    if form.cleaned_data.get('map') != name_dict[description]:
+                        # This form is teamplay result.
+                        error_msg = '같은 이름을 가진 경기의 맵이 서로 다릅니다.'
+                        form.add_error('map', error_msg)
+                else:
+                    # This form is not duplicated.
+                    name_dict[description] = form.cleaned_data.get('map')
 
 
-def get_player_versus_player_data_formset():
-    return formset_factory(
-        form=PlayerVersusPlayerDataForm,
-        extra=2,
+class ResultForm(forms.Form):
+    date = forms.DateField(
+        label='날짜',
+        widget=forms.NumberInput(
+            attrs={
+                'type': 'date',
+                'class': 'form-control'
+            }
+        ),
     )
-
-
-class ResultForm(forms.ModelForm):
-    class Meta:
-        model = Result
-        fields = [
-            'date',
-            'league',
-            'match_name',
-        ]
-        widgets = {
-            'date': forms.NumberInput(
-                attrs={
-                    'type': 'date',
-                    'class': 'form-control'
-                }
-            ),
-            'league': forms.Select(
-                attrs={'class': 'form-control'}
-            ),
-            'match_name': forms.TextInput(
-                attrs={'class': 'form-control'}
-            ),
-        }
-        labels = {
-            'date': '날짜',
-            'league': '리그',
-            'match_name': '게임이름',
-            # form row를 사용할 때는 col-form-label로 class를 지정해주어야 한다.
-            # label_tag() 인자로 attrs 옵션을 줄 수 있는데, init에서 하려고 하니까 안된다.
-            # 당장은 중요한게 아니니까 보류.
-        }
+    league = forms.ModelChoiceField(
+        label='리그',
+        queryset=League.objects.all(),
+        widget=forms.Select(
+            attrs={'class': 'form-control'}
+        )
+    )
+    match_name = forms.CharField(
+        label='게임 이름',
+        widget=forms.TextInput(
+            attrs={'class': 'form-control'}
+        ),
+    )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        # form row를 사용할 때는 col-form-label로 class를 지정해주어야 한다.
+        # label_tag() 인자로 attrs 옵션을 줄 수 있는데, init에서 하려고 하니까 안된다.
+        # 당장은 중요한게 아니니까 보류.
 
     # save with formset data.
-    def save(self, formset):
-        pass
+    def save_with(self, PVPDataFormSet):
+        # To create result data, we use form, not modelform.
+        # Q: Why don't you use ModelForm?
+        # A: Because modelform can't satisfy my result model.
+        # This form have field that winner and loser,
+        # but Result model only has one player.
+        # And it doesn't care who is winner. Just it has win_status.
+        # So we create two result data related winner and loser,
+        # but modelform only create one data. So, I use form, not modelform.
+
+        # It works fine, but using modelform is standardly recommand.
+        for form in PVPDataFormSet:
+            cleaned_data = form.cleaned_data
+            date = self.cleaned_data.get('date')
+            league = self.cleaned_data.get('league')
+            title = self.cleaned_data.get('match_name')
+            match_name = ''.join([title, cleaned_data.get('description')])
+
+            Result.objects.create(
+                date=date,
+                league=league,
+                match_name=match_name,
+                map=cleaned_data.get('map'),
+                type=cleaned_data.get('type'),
+                player=cleaned_data.get('winner'),
+                race=cleaned_data.get('winner_race'),
+                win_state=True
+            )
+            Result.objects.create(
+                date=date,
+                league=league,
+                match_name=match_name,
+                map=cleaned_data.get('map'),
+                type=cleaned_data.get('type'),
+                player=cleaned_data.get('loser'),
+                race=cleaned_data.get('loser_race'),
+                win_state=False
+            )
+
+
+def get_pvp_data_formset():
+    return formset_factory(
+        form=PVPDataForm,
+        formset=PVPDataFormSet,
+        extra=2,
+    )

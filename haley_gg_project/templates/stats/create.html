@@ -6,25 +6,31 @@
 {% endblock header %} 
 
 {% block content %}
+<div class="jumbotron">
+    사용 방법
+</div>
 <form method="POST" class="need-validations">
     {% csrf_token %}
     <div class="form-row">
         {% for field in form %}
             <div class="form-group col">
-                {{ field.errors }}
                 {{ field.label_tag}}
                 {{ field }}
+                {{ field.errors }}
             </div>
         {% endfor %}
     </div>
+    <hr>
     {{ formset.management_form }}
     {% for form in formset %}
     <div class="form-row">
         {% for field in form %}
-            <div class="form-group col">
-                {{ field.errors }}
+            <div class="form-group col mb-3">
                 {{ field.label_tag }}
                 {{ field }}
+                <small class="text-danger">
+                    {{ field.errors.as_text }}
+                </small>
             </div>
         {% endfor %}
     </div>
