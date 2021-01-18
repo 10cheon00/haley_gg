@@ -6,14 +6,14 @@
 {% endblock header %} 
 
 {% block content %}
-<div class="jumbotron">
+<div class='jumbotron'>
     사용 방법
 </div>
-<form method="POST" class="need-validations">
+<form method='POST' class='need-validations'>
     {% csrf_token %}
-    <div class="form-row">
+    <div class='form-row'>
         {% for field in form %}
-            <div class="form-group col">
+            <div class='form-group col'>
                 {{ field.label_tag}}
                 {{ field }}
                 {{ field.errors }}
@@ -22,72 +22,100 @@
     </div>
     <hr>
     {{ formset.management_form }}
-    {% for form in formset %}
-    <div class="form-row">
-        {% for field in form %}
-            <div class="form-group col mb-3">
-                {{ field.label_tag }}
-                {{ field }}
-                <small class="text-danger">
-                    {{ field.errors.as_text }}
-                </small>
+    <div id='formset_label' class='row text-center mb-3'>
+        <div class='col'>세트</div>
+        <div class='col'>게임타입</div>
+        <div class='col'>승자</div>
+        <div class='col'>승자 종족</div>
+        <div class='col'>맵</div>
+        <div class='col'>패자</div>
+        <div class='col'>패자 종족</div>
+        <div class='col'>삭제</div>
+    </div>
+    <div id='form_set'>
+        {% for form in formset %}
+            <div class='form-row'>
+                {% for field in form %}
+                    <div class='form-group col'>
+                        {{ field }}
+                        <small class='text-danger'>
+                            {{ field.errors.as_text }}
+                        </small>
+                    </div>
+                {% endfor %}
+                <input class='form-control col btn btn-outline-primary delete_form' value='Delete'>
+                <!-- <div class='form-group col btn btn-outline-primary delete_form'>
+                    Delete
+                </div> -->
             </div>
         {% endfor %}
     </div>
-    {% endfor %}
-    <button class="btn btn-success" type="submit">
-        Save
-    </button>
+    <div class='d-flex justify-content-between'>
+        <button class='btn btn-success' type='submit'>
+            Save
+        </button>
+        <div id='empty_form' style='display:none'>
+            <div class='form-row'>
+                {% for field in formset.empty_form %}
+                    <div class='form-group col mb-3'>
+                        {{ field }}
+                        <small class='text-danger'>
+                            {{ field.errors.as_text }}
+                        </small>
+                    </div>
+                {% endfor %}
+                <input class='form-group col btn btn-outline-primary delete_form' value='Delete'>
+            </div>
+        </div>
+        <input type='button' class='btn btn-primary' value='Add More' id='add_more'/>
+    </div>
 </form>
-<!-- <form method="POST">
-    {% csrf_token %}
-    <div class="form-row">
-        <div class="col-form-label">{{ form.date.label }}</div>
-        <div class="form-group col">
-            {{ form.date.error }}
-            {{ form.date }}
-        </div>
-        <div class="col-form-label">{{ form.league.label }}</div>
-        <div class="form-group col">
-            {{ form.league.error }}
-            {{ form.league }}
-        </div>
-        <div class="col-form-label">{{ form.match_name.label }}</div>
-        <div class="form-group col-md-6">
-            {{ form.match_name.error }}
-            {{ form.match_name }}
-        </div>
-    </div>
-    <div class="form-row">
-        {{ form.map.label_tag }}
-        <div class="form-group col">
-            {{ form.map.error }}
-            {{ form.map }}
-        </div>
-        {{ form.type.label_tag }}
-        <div class="form-group col">
-            {{ form.type.error }}
-            {{ form.type }}
-        </div>
-        {{ form.player.label_tag }}
-        <div class="form-group col">
-            {{ form.player.error }}
-            {{ form.player }}
-        </div>
-        {{ form.race.label_tag }}
-        <div class="form-group col">
-            {{ form.race.error }}
-            {{ form.race }}
-        </div>
-        <div class="form-group col">
-            {{ form.win_state.error }}
-            {{ form.win_state.label_tag }}
-            {{ form.win_state }}
-        </div>
-    </div>
-    <button class="btn btn-success" type="submit">
-        Save
-    </button>
-</form> -->
+<script type='text/javascript'>
+$('#add_more').click(function() {
+    // Get total form count.
+	var form_idx = $('#id_form-TOTAL_FORMS').val();
+    // Append form to formset.
+	$('#form_set').append($('#empty_form').html().replace(/__prefix__/g, form_idx));
+    // Update total form count.
+	$('#id_form-TOTAL_FORMS').val(parseInt(form_idx) + 1);
+    AddDeleteEventToForm();
+});
     
+$('#form_set').ready(function(){
+    AddDeleteEventToForm();
+});
+
+function AddDeleteEventToForm(){
+    $('.delete_form').on('click', function() {
+        // Get current form index.
+        var current_form_index = $('.delete_form').index(this);
+        console.log(current_form_index);
+        // Get total form count.
+        var form_idx = $('#id_form-TOTAL_FORMS').val();
+        // Remove current form.
+        $('#form_set .form-row')[current_form_index].remove();
+        // Update form's index after current form.
+        $.each($('#form_set .form-row').slice(current_form_index), function(index, item){ 
+            ChangeElementIdAndName($(this).find('select'), index + current_form_index);
+            ChangeElementIdAndName($(this).find('input'), index + current_form_index);
+            var for_list = $(this).find('label')
+            for(var i=0; i<for_list.length; ++i){
+                var new_for = for_list[i].for.replace(/\d+/, index + current_form_index);
+                for_list[i].for = new_for;
+            }
+        });
+        // Update total form count.
+        $('#id_form-TOTAL_FORMS').val(parseInt(form_idx) - 1);
+    });
+}
+
+function ChangeElementIdAndName(element, index){
+    for(var i=0; i<element.length; ++i){
+        var new_id = element[i].id.replace(/\d+/, index);
+        var new_name = element[i].name.replace(/\d+/, index);
+        element[i].id = new_id;
+        element[i].name = new_name;
+    }
+}
+</script>
 {% endblock content %}
