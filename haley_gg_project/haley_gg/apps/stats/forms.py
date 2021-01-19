@@ -3,6 +3,42 @@ from django.forms import formset_factory
 
 from haley_gg.apps.stats.models import Player, Map, Result, League
 
+
+class ResultForm(forms.Form):
+    date = forms.DateField(
+        label='날짜',
+        widget=forms.NumberInput(
+            attrs={
+                'type': 'date',
+                'class': 'form-control'
+            }
+        ),
+    )
+    league = forms.ModelChoiceField(
+        label='리그',
+        queryset=League.objects.all(),
+        widget=forms.Select(
+            attrs={'class': 'form-control'}
+        )
+    )
+    title = forms.CharField(
+        label='게임 이름',
+        widget=forms.TextInput(
+            attrs={'class': 'form-control'}
+        ),
+    )
+
+    def clean(self):
+        # Check that matches are already exist.
+        if Result.objects.filter(
+            date=self.cleaned_data.get('date'),
+            league=self.cleaned_data.get('league'),
+            title=self.cleaned_data.get('title')
+        ).exists():
+            error_msg = '같은 경기 결과가 이미 존재합니다.'
+            self.add_error('title', error_msg)
+
+
 class PVPDataForm(forms.Form):
     race_list = [
         ('T', 'Terran'),
@@ -10,9 +46,9 @@ class PVPDataForm(forms.Form):
         ('Z', 'Zerg'),
     ]
     # set or winner's match, etc ...
-    # this field is combined into match_name field in ResultForm.
-    description = forms.CharField(
-        label="세트",
+    # this field is combined into title field in ResultForm.
+    round = forms.CharField(
+        label="라운드",
         max_length=100,
         widget=forms.TextInput(
             attrs={
@@ -105,43 +141,41 @@ class PVPDataFormSet(forms.BaseFormSet):
         if self.total_error_count() > 0:
             return
 
-        cleaned_data_dict = {}
+        # Group by round
+        grouped_form = {}
         for form in self.forms:
-            # Check that matches are already exist.
-            if Result.objects.filter(
-                date=form.cleaned_data.get('date'),
-                league=form.cleaned_data.get('league'),
-                match_name=form.cleaned_data.get('match_name') # is this currect?
-            ).exists():
-                error_msg = '이미 존재하는 경기 결과입니다.'
-                form.add_error('match_name', error_msg)
+            round = form.cleaned_data.get('round')
+            if round not in grouped_form:
+                grouped_form[round] = []
+            grouped_form[round].append(form)
+
+        # Iterate forms that grouped by round.
+        for form_list in grouped_form.values():
+            if len(form_list) < 2:
                 continue
 
-            # Check that formset have duplicated match_name what form has.
-            # If same match_name is exist in formset,
-            # check that all type are top_and_bottom,
-            # and check that all map are equal.
-            description = form.cleaned_data.get('description')
-            # If description is empty, skip further progress.
-            if description:
-                if description in cleaned_data_dict.keys():
-                    # This result already exists in formset.
-                    if form.cleaned_data.get('type') not in \
-                    cleaned_data_dict[description]['type']:
-                        # This form's type is not top_and_bottom.
-                        error_msg = '같은 이름을 가진 경기의 타입이 서로 다릅니다.'
-                        form.add_error('type', error_msg)
-                    if form.cleaned_data.get('map') not in \
-                    cleaned_data_dict[description]['map']:
-                        # This form is teamplay result.
-                        error_msg = '같은 이름을 가진 경기의 맵이 서로 다릅니다.'
-                        form.add_error('map', error_msg)
-                else:
-                    # This form is not duplicated.
-                    cleaned_data_dict[description] = {
-                        'type': [form.cleaned_data.get('type')],
-                        'map': [form.cleaned_data.get('map')]
-                    }
+            # Check that all form's type, map is same.
+            # Check that all players are distinct.
+            maps = [form.cleaned_data.get('map') for form in form_list]
+            map_error_msg = ''
+            if len(maps) != len(set(maps)):
+                map_error_msg = '같은 맵이 아닙니다.'
+
+            players = [form.cleaned_data.get('winner') for form in form_list]
+            players.extend([form.cleaned_data.get('loser') for form in form_list])
+            duplicate_players = set([x for x in players if players.count(x) > 1])
+            duplicate_error_msg = '플레이어가 중복됩니다.'
+
+            error_msg = '팀플 타입이 아닙니다.'
+            for form in form_list:
+                if form.cleaned_data.get('type') != 'top_and_bottom':
+                    form.add_error('type', error_msg)
+                if len(map_error_msg) == 0:
+                    form.add_error('map', map_error_msg)
+                if form.cleaned_data.get('winner') in duplicate_players:
+                    form.add_error('winner', duplicate_error_msg)
+                if form.cleaned_data.get('loser') in duplicate_players:
+                    form.add_error('loser', duplicate_error_msg)
 
     def save_with(self, ResultForm):
         # To create result data, we use form, not modelform.
@@ -156,16 +190,16 @@ class PVPDataFormSet(forms.BaseFormSet):
         # It works fine, but using modelform is standardly recommand.
         date = ResultForm.cleaned_data.get('date')
         league = ResultForm.cleaned_data.get('league')
-        title = ResultForm.cleaned_data.get('match_name')
+        title = ResultForm.cleaned_data.get('title')
         for form in self.forms:
             cleaned_data = form.cleaned_data
-            match_name = ''.join([title, ' ', cleaned_data.get('description')])
 
             Result.objects.bulk_create([
                 Result(
                     date=date,
                     league=league,
-                    match_name=match_name,
+                    title=title,
+                    round=cleaned_data.get('round'),
                     map=cleaned_data.get('map'),
                     type=cleaned_data.get('type'),
                     player=cleaned_data.get('winner'),
@@ -175,7 +209,8 @@ class PVPDataFormSet(forms.BaseFormSet):
                 Result(
                     date=date,
                     league=league,
-                    match_name=match_name,
+                    title=title,
+                    round=cleaned_data.get('round'),
                     map=cleaned_data.get('map'),
                     type=cleaned_data.get('type'),
                     player=cleaned_data.get('loser'),
@@ -183,31 +218,6 @@ class PVPDataFormSet(forms.BaseFormSet):
                     win_state=False
                 )
             ])
-
-
-class ResultForm(forms.Form):
-    date = forms.DateField(
-        label='날짜',
-        widget=forms.NumberInput(
-            attrs={
-                'type': 'date',
-                'class': 'form-control'
-            }
-        ),
-    )
-    league = forms.ModelChoiceField(
-        label='리그',
-        queryset=League.objects.all(),
-        widget=forms.Select(
-            attrs={'class': 'form-control'}
-        )
-    )
-    match_name = forms.CharField(
-        label='게임 이름',
-        widget=forms.TextInput(
-            attrs={'class': 'form-control'}
-        ),
-    )
 
 
 def get_pvp_data_formset():

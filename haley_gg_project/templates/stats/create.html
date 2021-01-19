@@ -16,14 +16,17 @@
             <div class='form-group col'>
                 {{ field.label_tag}}
                 {{ field }}
-                {{ field.errors }}
+                <small class='text-danger'>
+                    {{ field.errors.as_text }}
+                </small>
             </div>
         {% endfor %}
     </div>
     <hr>
     {{ formset.management_form }}
+<!--   Need change to table format.   -->
     <div id='formset_label' class='row text-center mb-3'>
-        <div class='col'>세트</div>
+        <div class='col'>라운드</div>
         <div class='col'>게임타입</div>
         <div class='col'>승자</div>
         <div class='col'>승자 종족</div>
@@ -43,10 +46,9 @@
                         </small>
                     </div>
                 {% endfor %}
-                <input class='form-control col btn btn-outline-primary delete_form' value='Delete'>
-                <!-- <div class='form-group col btn btn-outline-primary delete_form'>
-                    Delete
-                </div> -->
+                <input class='form-control col btn btn-outline-primary delete_form' 
+                       value='Delete' 
+                       readonly>
             </div>
         {% endfor %}
     </div>
@@ -64,7 +66,9 @@
                         </small>
                     </div>
                 {% endfor %}
-                <input class='form-group col btn btn-outline-primary delete_form' value='Delete'>
+                <input class='form-group col btn btn-outline-primary delete_form'
+                       value='Delete' 
+                       readonly>
             </div>
         </div>
         <input type='button' class='btn btn-primary' value='Add More' id='add_more'/>

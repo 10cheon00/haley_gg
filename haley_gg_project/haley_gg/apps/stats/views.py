@@ -31,7 +31,6 @@ class CreateResultView(View):
         resultform = ResultForm(request.POST)
         if formset.is_valid() and resultform.is_valid():
             formset.save_with(resultform)
-            # resultform.save_with(formset)
             return redirect(reverse('stats:result_list'))
         context = {
             'formset': formset,

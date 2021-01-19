@@ -72,7 +72,12 @@ class Result(models.Model):
         on_delete=models.CASCADE
     )
 
-    match_name = models.CharField(
+    title = models.CharField(
+        default='',
+        max_length=100
+    )
+
+    round = models.CharField(
         default='',
         max_length=100
     )
@@ -110,22 +115,26 @@ class Result(models.Model):
     class Meta:
         ordering = [
             'date',
-            'match_name',
+            'title',
+            'round',
             'win_state',
         ]
 
     def __str__(self):
-        str_list = []
-        str_list.append(str(self.date))
-        str_list.append(' | ')
-        str_list.append(str(self.league))
-        str_list.append(' ')
-        str_list.append(self.match_name)
-        str_list.append(' ')
-        str_list.append(str(self.map))
-        str_list.append(' | ')
-        str_list.append(str(self.player))
-        str_list.append(' (')
-        str_list.append(self.race)
-        str_list.append(')')
+        str_list = [
+            str(self.date),
+            ' | ',
+            self.league.__str__(),
+            ' ',
+            self.title,
+            ' ',
+            self.round,
+            ' ',
+            self.map.__str__(),
+            ' | ',
+            self.player.__str__(),
+            '(',
+            self.race,
+            ')',
+        ]
         return ''.join(str_list)
