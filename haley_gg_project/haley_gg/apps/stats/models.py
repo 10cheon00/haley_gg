@@ -1,6 +1,8 @@
 from django.db import models
 from django.utils import timezone
 
+from haley_gg.apps.stats.utils import slugify
+
 
 class Player(models.Model):
     name = models.CharField(
@@ -28,6 +30,8 @@ class Player(models.Model):
         return self.name
 
 
+# Maybe, this model will be have some data.
+# Who is winner, top 4 players, or team.
 class League(models.Model):
     name = models.CharField(
         default='',
@@ -49,6 +53,9 @@ class League(models.Model):
 
     def __str__(self):
         return self.name
+
+    def slugify_str(self):
+        return slugify(self.name)
 
 
 class Map(models.Model):
@@ -132,9 +139,36 @@ class Result(models.Model):
             ' ',
             self.map.__str__(),
             ' | ',
+            self.type,
+            ' | ',
             self.player.__str__(),
             '(',
             self.race,
             ')',
         ]
         return ''.join(str_list)
+
+
+class ProleagueTeam(models.Model):
+    name = models.CharField(
+        default='',
+        max_length=100,
+        unique=True
+    )
+    league = models.ForeignKey(
+        League,
+        on_delete=models.CASCADE,
+        limit_choices_to={'type': 'proleague'}
+    )
+    players = models.ManyToManyField(
+        Player
+    )
+    points = models.PositiveSmallIntegerField(
+        default=0
+    )
+
+    class Meta:
+        pass
+
+    def __str__(self):
+        return self.name

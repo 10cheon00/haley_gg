@@ -1,8 +1,7 @@
 from django.shortcuts import render, redirect, reverse
-from django.views.generic import ListView, View
-from django.forms import modelformset_factory
+from django.views.generic import TemplateView, View, ListView
 
-from haley_gg.apps.stats.models import Result
+from haley_gg.apps.stats.models import Result, League
 from haley_gg.apps.stats.forms import get_pvp_data_formset
 from haley_gg.apps.stats.forms import ResultForm
 
@@ -10,6 +9,15 @@ from haley_gg.apps.stats.forms import ResultForm
 class ResultListView(ListView):
     template_name = 'stats/results_list.html'
     model = Result
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        results = Result.objects.select_related(
+            'map',
+            'league',
+            'player')
+        context['result_list'] = results
+        return context
 
 
 class CreateResultView(View):
@@ -37,3 +45,20 @@ class CreateResultView(View):
             'form': resultform
         }
         return render(request, self.template_name, context)
+
+
+class ProleagueView(TemplateView):
+    template_name = 'stats/proleague.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['league_list'] = League.objects.filter(
+            type="proleague"
+        ).prefetch_related(
+            'result_set',
+            'result_set__map',
+            'result_set__league',
+            'result_set__player',
+        )
+        return context
+

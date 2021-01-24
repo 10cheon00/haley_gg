@@ -40,10 +40,13 @@
                     <span class="navbar-toggler-icon"></span>
                 </button>
                 <div class="collapse navbar-collapse" id="navbarNavAltMarkup">
-                    <div class="nav nav-pills">
+                    <div class="nav">
                         <a class="nav-link nav-item 
                                   {% block active_result %}{% endblock active_result %}" 
                            href="{% url 'stats:result_list' %}">전적보기</a>
+                        <a class="nav-link nav-item 
+                                  {% block active_proleague %}{% endblock active_proleague %}" 
+                           href="{% url 'stats:proleague' %}">프로리그</a>
                     </div>
                 </div>
             </div>

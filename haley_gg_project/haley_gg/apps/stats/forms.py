@@ -218,6 +218,7 @@ class PVPDataFormSet(forms.BaseFormSet):
                     win_state=False
                 )
             ])
+            # Calculate team status.
 
 
 def get_pvp_data_formset():
