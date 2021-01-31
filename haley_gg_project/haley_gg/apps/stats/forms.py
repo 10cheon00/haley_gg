@@ -31,22 +31,6 @@ class ResultForm(forms.Form):
         ),
     )
 
-    def clean(self):
-        # Check that matches are already exist...?
-        # This validation only check that if already exists title.
-        # But result model has round field...
-        # Only validate on title field? It's wrong!
-        # So this validation is not required in this form.
-        # And this must be move to formset.
-        pass
-        # if Result.objects.filter(
-        #     date=self.cleaned_data.get('date'),
-        #     league=self.cleaned_data.get('league'),
-        #     title=self.cleaned_data.get('title')
-        # ).exists():
-        #     error_msg = '같은 경기 결과가 이미 존재합니다.'
-        #     self.add_error('title', error_msg)
-
 
 class PVPDataForm(forms.Form):
     race_list = [
@@ -144,12 +128,9 @@ class PVPDataForm(forms.Form):
 
 class PVPDataFormSet(forms.BaseFormSet):
     def is_valid_with(self, resultForm):
-        try:
-            # Get resultForm data to check that data what formset have already exists.
-            self.resultForm = resultForm
-            super().is_valid()
-        except Exception:
-            raise Exception
+        # Get resultForm data to check that data what formset have already exists.
+        self.resultForm = resultForm
+        return super().is_valid()
 
     def clean(self):
         super().clean()
@@ -172,6 +153,7 @@ class PVPDataFormSet(forms.BaseFormSet):
                 error_msg = '같은 경기 결과가 이미 존재합니다.'
                 form.add_error('round', error_msg)
                 continue
+
             if round not in grouped_form:
                 grouped_form[round] = []
             grouped_form[round].append(form)
@@ -269,7 +251,9 @@ class PVPDataFormSet(forms.BaseFormSet):
                 Q(players__in=[result.player])
             ).first()
 
-            if result.round not in saved_result_list:
+            # To save win/lose result, check that result counts in list.
+            # If it lower than 2, append result.
+            if saved_result_list.count(result.round) < 2:
                 team.save_result(result)
                 saved_result_list.append(result.round)
 
