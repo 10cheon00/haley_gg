@@ -1,0 +1,68 @@
+{% extends 'base.html' %}
+{% block active_proleague %}active{% endblock active_proleague %}
+{% block content %}
+<div class="h3">프로리그 현황</div>
+<!--   League Selector   -->
+<ul class="nav nav-tabs">
+    {% for league in league_list %}
+        <li class="nav-item">
+            <a class="nav-link {% if forloop.counter == 1 %}active{% endif %}" 
+               data-toggle="tab"
+               href="#{{ league.slugify_str }}">
+                {{ league }}
+            </a>
+        </li>
+    {% endfor %}
+</ul>
+<!--   League content   -->
+<div class="tab-content">
+    {% for league in league_list %}
+        <div class="tab-pane {% if forloop.counter == 1 %}show active{% endif %}" 
+             id="{{ league.slugify_str }}">
+            <!--   Team ranks   -->
+            {% for team in league.team_list.all %}
+                <!--   Team list grouped by league   -->
+                <!--   This content style is table.   -->
+                <div class="row text-center">
+                    <div class="col">
+                        {{ team.name }}
+                    </div>
+                    <div class="col">
+                        points<br/>
+                        {{ team.points }}
+                    </div>
+                    <div class="col">
+                        win<br/>
+                        
+                    </div>
+                    <div class="col">
+                        lose<br/>
+                        
+                    </div>
+                    <div class="col">
+                        melee_win<br/>
+                        {{ team.melee_win_counts }}
+                    </div>
+                    <div class="col">
+                        melee_lose<br/>
+                        {{ team.melee_lose_counts }}
+                    </div>
+                    <div class="col">
+                        top_and_bottom_win<br/>
+                        {{ team.top_and_bottom_win_counts }}
+                    </div>
+                    <div class="col">
+                        top_and_bottom_lose<br/>
+                        {{ team.top_and_bottom_lose_counts }}
+                    </div>
+                </div>
+            {% endfor %}
+            <!--   Results   -->
+            {% for result in league.result_list.all %}
+                {{ result }}
+                <br>
+            {% endfor %}
+        </div>
+    {% endfor %}
+</div>
+{% endblock content %}

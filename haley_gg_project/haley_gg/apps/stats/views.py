@@ -25,8 +25,8 @@ class CreateResultView(View):
 
     def get(self, request, *args, **kwargs):
         PVPDataFormSet = get_pvp_data_formset()
-        formset = PVPDataFormSet()
         resultform = ResultForm()
+        formset = PVPDataFormSet()
         context = {
             'formset': formset,
             'form': resultform
@@ -35,14 +35,15 @@ class CreateResultView(View):
 
     def post(self, request, *args, **kwargs):
         PVPDataFormSet = get_pvp_data_formset()
+        resultForm = ResultForm(request.POST)
         formset = PVPDataFormSet(request.POST)
-        resultform = ResultForm(request.POST)
-        if formset.is_valid() and resultform.is_valid():
-            formset.save_with(resultform)
-            return redirect(reverse('stats:result_list'))
+        if resultForm.is_valid():
+            if formset.is_valid_with(resultForm):
+                formset.save_with(resultForm)
+                return redirect(reverse('stats:result_list'))
         context = {
             'formset': formset,
-            'form': resultform
+            'form': resultForm
         }
         return render(request, self.template_name, context)
 
@@ -55,10 +56,11 @@ class ProleagueView(TemplateView):
         context['league_list'] = League.objects.filter(
             type="proleague"
         ).prefetch_related(
-            'result_set',
-            'result_set__map',
-            'result_set__league',
-            'result_set__player',
+            'team_list',
+            'result_list',
+            'result_list__map',
+            'result_list__league',
+            'result_list__player',
         )
         return context
 

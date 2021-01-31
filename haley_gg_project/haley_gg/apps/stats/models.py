@@ -30,8 +30,7 @@ class Player(models.Model):
         return self.name
 
 
-# Maybe, this model will be have some data.
-# Who is winner, top 4 players, or team.
+# Maybe, this model will be have op 8 players, or team.
 class League(models.Model):
     name = models.CharField(
         default='',
@@ -71,12 +70,79 @@ class Map(models.Model):
         return self.name
 
 
+class ProleagueTeam(models.Model):
+    name = models.CharField(
+        default='',
+        max_length=100,
+        unique=True
+    )
+    league = models.ForeignKey(
+        League,
+        on_delete=models.CASCADE,
+        limit_choices_to={'type': 'proleague'},
+        related_name='team_list'
+    )
+    players = models.ManyToManyField(
+        Player
+    )
+    # This value is sum of set score.
+    points = models.SmallIntegerField(
+        default=0
+    )
+    melee_win_counts = models.PositiveSmallIntegerField(
+        default=0
+    )
+    melee_lose_counts = models.PositiveSmallIntegerField(
+        default=0
+    )
+    top_and_bottom_win_counts = models.PositiveSmallIntegerField(
+        default=0
+    )
+    top_and_bottom_lose_counts = models.PositiveSmallIntegerField(
+        default=0
+    )
+
+    class Meta:
+        ordering = [
+            'points'
+        ]
+
+    def __str__(self):
+        return self.name
+
+    # update counts.
+    def save_result(self, result):
+        if result.win_state:
+            self.points += 1
+        else:
+            self.points -= 1
+
+        if result.type == 'melee':
+            if result.win_state:
+                self.melee_win_counts += 1
+            else:
+                self.melee_lose_counts += 1
+        else:
+            if result.win_state:
+                self.top_and_bottom_win_counts += 1
+            else:
+                self.top_and_bottom_lose_counts += 1
+        self.save()
+
+    def get_total_win(self):
+        return self.melee_win_counts + self.top_and_bottom_win_counts
+
+    def get_total_lose(self):
+        return self.melee_lose_counts + self.top_and_bottom_lose_counts
+
+
 class Result(models.Model):
     date = models.DateField(default=timezone.now)
 
     league = models.ForeignKey(
         League,
-        on_delete=models.CASCADE
+        on_delete=models.CASCADE,
+        related_name='result_list'
     )
 
     title = models.CharField(
@@ -147,28 +213,3 @@ class Result(models.Model):
             ')',
         ]
         return ''.join(str_list)
-
-
-class ProleagueTeam(models.Model):
-    name = models.CharField(
-        default='',
-        max_length=100,
-        unique=True
-    )
-    league = models.ForeignKey(
-        League,
-        on_delete=models.CASCADE,
-        limit_choices_to={'type': 'proleague'}
-    )
-    players = models.ManyToManyField(
-        Player
-    )
-    points = models.PositiveSmallIntegerField(
-        default=0
-    )
-
-    class Meta:
-        pass
-
-    def __str__(self):
-        return self.name
