@@ -64,7 +64,7 @@ class Map(models.Model):
     )
 
     class Meta:
-        ordering = ['name']
+        ordering = ['-name']
 
     def __str__(self):
         return self.name
@@ -104,7 +104,7 @@ class ProleagueTeam(models.Model):
 
     class Meta:
         ordering = [
-            'points'
+            '-points'
         ]
 
     def __str__(self):
@@ -185,12 +185,19 @@ class Result(models.Model):
 
     win_state = models.BooleanField(default=False)
 
+    remarks = models.CharField(
+        default='',
+        max_length=100,
+        null=True,
+        blank=True,
+    )
+
     class Meta:
         ordering = [
-            'date',
-            'title',
-            'round',
-            'win_state',
+            '-date',
+            '-title',
+            '-round',
+            '-win_state',
         ]
 
     def __str__(self):

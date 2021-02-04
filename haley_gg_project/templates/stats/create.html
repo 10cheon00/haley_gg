@@ -11,6 +11,7 @@
 </div>
 <form method='POST' class='need-validations'>
     {% csrf_token %}
+    <!--   ResultForm   -->
     <div class='form-row'>
         {% for field in form %}
             <div class='form-group col'>
@@ -24,7 +25,7 @@
     </div>
     <hr>
     {{ formset.management_form }}
-<!--   Need change to table format.   -->
+    <!--   Need change to table format.   -->
     <div id='formset_label' class='row text-center mb-3'>
         <div class='col'>라운드</div>
         <div class='col'>게임타입</div>
@@ -35,20 +36,28 @@
         <div class='col'>패자 종족</div>
         <div class='col'>삭제</div>
     </div>
+    <!--   PVPDataForms   -->
     <div id='form_set'>
         {% for form in formset %}
             <div class='form-row'>
                 {% for field in form %}
-                    <div class='form-group col'>
-                        {{ field }}
-                        <small class='text-danger'>
-                            {{ field.errors.as_text }}
-                        </small>
-                    </div>
+                    {% if field.name != 'remark' %}
+                        <div class='form-group col'>
+                            {{ field }}
+                            <small class='text-danger'>
+                                {{ field.errors.as_text }}
+                            </small>
+                        </div>
+                    {% endif %}
                 {% endfor %}
                 <input class='form-control col btn btn-outline-primary delete_form' 
                        value='Delete' 
                        readonly>
+            </div>
+            <div class='form-row'>
+                <div class="form-group col">
+                    {{ form.remark }}    
+                </div>
             </div>
         {% endfor %}
     </div>
@@ -56,69 +65,103 @@
         <button class='btn btn-success' type='submit'>
             Save
         </button>
+        <!--   Appendable form   -->
         <div id='empty_form' style='display:none'>
             <div class='form-row'>
                 {% for field in formset.empty_form %}
-                    <div class='form-group col mb-3'>
-                        {{ field }}
-                        <small class='text-danger'>
-                            {{ field.errors.as_text }}
-                        </small>
-                    </div>
+                    {% if field.name != 'remark' %}
+                        <div class='form-group col'>
+                            {{ field }}
+                            <small class='text-danger'>
+                                {{ field.errors.as_text }}
+                            </small>
+                        </div>
+                    {% endif %}
                 {% endfor %}
                 <input class='form-control col btn btn-outline-primary delete_form'
                        value='Delete' 
                        readonly>
             </div>
+            <div class='form-row'>
+                <div class="form-group col">
+                    {{ formset.empty_form.remark }}    
+                </div>
+            </div>
         </div>
+
         <input type='button' class='btn btn-primary' value='Add More' id='add_more'/>
     </div>
 </form>
 <script type='text/javascript'>
+
 $('#add_more').click(function() {
     // Get total form count.
-	var form_idx = $('#id_form-TOTAL_FORMS').val();
+	var formCount = $('#id_form-TOTAL_FORMS').val();
     // Append form to formset.
-	$('#form_set').append($('#empty_form').html().replace(/__prefix__/g, form_idx));
+	$('#form_set').append($('#empty_form').html().replace(/__prefix__/g, formCount));
     // Update total form count.
-	$('#id_form-TOTAL_FORMS').val(parseInt(form_idx) + 1);
-    AddDeleteEventToForm();
+	$('#id_form-TOTAL_FORMS').val(parseInt(formCount) + 1);
+    
+    // Add EventListener to current form.
+    AddDeleteEventToForm($('.delete_form')[formCount]);
 });
     
 $('#form_set').ready(function(){
-    AddDeleteEventToForm();
+    // Get all delete form input element.
+    var formList = $('#form_set .form-row .delete_form');
+    for(var i=0; i<formList.length; ++i)
+        AddDeleteEventToForm(formList[i]);
 });
 
-function AddDeleteEventToForm(){
-    $('.delete_form').on('click', function() {
-        // Get current form index.
-        var current_form_index = $('.delete_form').index(this);
-        console.log(current_form_index);
-        // Get total form count.
-        var form_idx = $('#id_form-TOTAL_FORMS').val();
-        // Remove current form.
-        $('#form_set .form-row')[current_form_index].remove();
-        // Update form's index after current form.
-        $.each($('#form_set .form-row').slice(current_form_index), function(index, item){ 
-            ChangeElementIdAndName($(this).find('select'), index + current_form_index);
-            ChangeElementIdAndName($(this).find('input'), index + current_form_index);
-            var for_list = $(this).find('label')
-            for(var i=0; i<for_list.length; ++i){
-                var new_for = for_list[i].for.replace(/\d+/, index + current_form_index);
-                for_list[i].for = new_for;
+function AddDeleteEventToForm(element){
+    /*
+    
+     remark를 추가하면서 formset추가에 애를 먹고 있다.
+     모든 delete_form input에 이벤트가 계속 달려 각각 달아주는 방법으로 바꾸고 있다.
+     그렇지만 삭제하는 방법과, id,name을 바꾸는게 되지 않아 마음이 착잡합니다..
+    
+    */
+    element.addEventListener(
+        'click', 
+        function(e){
+            // Find selected form index.
+            let formList = $('#form_set .form-row .delete_form');
+            let selectedFormIndex = formList.index(element)
+
+            // Delete selected form in formset.
+            for(var i=0; i<2; ++i){
+                let selectedForm = $('#form_set .form-row')[selectedFormIndex * 2];
+                $('#form_set .form-row')[selectedFormIndex * 2].parentNode.removeChild(selectedForm);
             }
-        });
-        // Update total form count.
-        $('#id_form-TOTAL_FORMS').val(parseInt(form_idx) - 1);
-    });
+            // Update form's index after selected form index.
+            $.each($('#form_set .form-row').slice(selectedFormIndex * 2), function(index, value){ 
+                // Change id, name attirubutes in select, input elements.
+                // '~' is Bitwise not operation.  '~~' means convert float to int. Curious...
+                let groupedIndex = ~~(index/2);
+                ChangeElementIdAndName($(this).find('select'), selectedFormIndex + groupedIndex );
+                ChangeElementIdAndName($(this).find('input'), selectedFormIndex + groupedIndex );
+
+                let forList = $(this).find('label');
+                for(var i=0; i<forList.length; ++i){
+                    // Change 'for' attribute values.
+                    let newFor = forList[i].for.replace(/\d+/, selectedFormIndex + groupedIndex );
+                    forList[i].for = newFor;
+                }
+            });
+
+            // Update total form count.
+            let formCount = $('#id_form-TOTAL_FORMS').val();
+            $('#id_form-TOTAL_FORMS').val(parseInt(formCount) - 1);
+        }
+    );
 }
 
 function ChangeElementIdAndName(element, index){
     for(var i=0; i<element.length; ++i){
-        var new_id = element[i].id.replace(/\d+/, index);
-        var new_name = element[i].name.replace(/\d+/, index);
-        element[i].id = new_id;
-        element[i].name = new_name;
+        let newId = element[i].id.replace(/\d+/, index);
+        let newName = element[i].name.replace(/\d+/, index);
+        element[i].id = newId;
+        element[i].name = newName;
     }
 }
 </script>

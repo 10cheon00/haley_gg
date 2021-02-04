@@ -112,10 +112,20 @@ class PVPDataForm(forms.Form):
             }
         ),
     )
+    remark = forms.CharField(
+        widget=forms.TextInput(
+            attrs={
+                'class': 'form-control',
+                'required': 'false',
+                'placeholder': '특이사항 ex)기권승'
+            }
+        ),
+    )
 
     def clean(self):
-        cleaned_data = super().clean()
         # Check that winner is same as loser.
+
+        cleaned_data = super().clean()
         if not self.errors:
             winner = cleaned_data.get('winner')
             loser = cleaned_data.get('loser')
@@ -133,6 +143,10 @@ class PVPDataFormSet(forms.BaseFormSet):
         return super().is_valid()
 
     def clean(self):
+        # 1. Group results by round data.
+        # 1.1 If current result already exists, pass.
+        # 2. If result's type is teamplay, check grouped teamplay data are validate.
+
         super().clean()
 
         # If formset have errors, pass cross form validation.
@@ -160,7 +174,7 @@ class PVPDataFormSet(forms.BaseFormSet):
 
         # Iterate forms that grouped by round.
         for form_list in grouped_form.values():
-            # Only run below validation sequence when rabs()esult type is teamplay.
+            # Only run below validation sequence when result type is teamplay.
             # Melee data already validated in PVPDataForm.
             if len(form_list) < 2:
                 continue
@@ -237,11 +251,10 @@ class PVPDataFormSet(forms.BaseFormSet):
         for result in result_list:
             # Calculate team status.
 
-            # 1. resultForm에 들어있는 리그를 갖고 온다.
-            # 2. 프로리그가 아니라면 그만둔다.
-            # 3. 플레이어의 팀을 찾을 때, 해당 리그에 맞는 팀을 갖고 온다.
-            # 4. 그 팀에 승리 또는 패배값을 누적하고 points에도 같이 누적한다.
-            # 4-1. 팀플매치인경우 한 번만 누적한다.
+            # 1. Get a league in resultForm.
+            # 2. If it is not proleague, continue to other result.
+            # 3. Get team associated player in result.
+            # 4. Save current result to team.
             if league.type != 'proleague':
                 continue
 
