@@ -1,8 +1,0 @@
-{% extends 'base.html' %}
-{% block active_result %}active {% endblock active_result %}
-
-{% block content %}
-{% for result in result_list %}
-    league type : {{ result.league.type }} ---- {{ result }}<br>
-{% endfor %}
-{% endblock content %}

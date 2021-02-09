@@ -1,0 +1,22 @@
+{% extends 'base.html' %} {% block content %} {% load static %}
+<div class="profile">
+    <div class="jumbotron rounded-0 text-secondary text-center {{ object.most_race }}">
+        <div class="h1">
+            {{ object.name }}
+            <span class="h4 text-secondary">{{ object.most_race }}</span>
+        </div>
+        <small class="text-secondary">{{ object.joined_date }}에 가입</small>
+    </div>
+    <hr>
+    <div class="h2 m-3">최근 전적</div>
+    <div class="">
+        {% include 'stats/results/list.html' %}
+    </div>
+    <hr>
+    <div class="h2 m-3">커리어</div>
+    <div class="jumbotron rounded-0 ">
+        {{ object.career }}
+    </div>
+</div>
+<hr>
+{% endblock content %}

@@ -58,7 +58,6 @@ class PVPDataForm(forms.Form):
         widget=forms.Select(
             attrs={
                 'class': 'form-control',
-                # 'required': 'true'
             },
         ),
     )
@@ -68,7 +67,6 @@ class PVPDataForm(forms.Form):
         widget=forms.Select(
             attrs={
                 'class': 'form-control',
-                # 'required': 'true'
             }
         ),
     )
@@ -78,7 +76,6 @@ class PVPDataForm(forms.Form):
         widget=forms.Select(
             attrs={
                 'class': 'form-control',
-                # 'required': 'true'
             }
         ),
     )
@@ -88,7 +85,6 @@ class PVPDataForm(forms.Form):
         widget=forms.Select(
             attrs={
                 'class': 'form-control',
-                # 'required': 'true'
             }
         ),
     )
@@ -98,7 +94,6 @@ class PVPDataForm(forms.Form):
         widget=forms.Select(
             attrs={
                 'class': 'form-control',
-                # 'required': 'true'
             }
         ),
     )
@@ -108,7 +103,6 @@ class PVPDataForm(forms.Form):
         widget=forms.Select(
             attrs={
                 'class': 'form-control',
-                # 'required': 'true'
             }
         ),
     )
@@ -258,7 +252,6 @@ class PVPDataFormSet(forms.BaseFormSet):
             if league.type != 'proleague':
                 continue
 
-            # player가 속하고, league가 1번의 결과값인 team을 찾는다.
             team = ProleagueTeam.objects.filter(
                 Q(league=league) &
                 Q(players__in=[result.player])

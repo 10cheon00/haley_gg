@@ -1,10 +1,13 @@
 from django.db import models
 from django.utils import timezone
+from django.shortcuts import reverse
 
-from haley_gg.apps.stats.utils import slugify
+from haley_gg.apps.stats.utils import slugify, remove_space
 
 
 class Player(models.Model):
+    # When create or save player name,
+    # remove blanks from name string.
     name = models.CharField(
         default='',
         max_length=50
@@ -28,6 +31,14 @@ class Player(models.Model):
 
     def __str__(self):
         return self.name
+
+    # Save name what removed spaces.
+    def save(self, *args, **kwargs):
+        self.name = remove_space(self.name)
+        return super().save(*args, **kwargs)
+
+    def get_absolute_url(self):
+        return reverse('stats:player', kwargs={'name': self.name})
 
 
 # Maybe, this model will be have op 8 players, or team.
@@ -204,11 +215,7 @@ class Result(models.Model):
         str_list = [
             str(self.date),
             ' | ',
-            self.league.__str__(),
-            ' ',
-            self.title,
-            ' ',
-            self.round,
+            self.match_name(),
             ' ',
             self.map.__str__(),
             ' | ',
@@ -218,5 +225,15 @@ class Result(models.Model):
             '(',
             self.race,
             ')',
+        ]
+        return ''.join(str_list)
+
+    def match_name(self):
+        str_list = [
+            self.league.__str__(),
+            ' ',
+            self.title,
+            ' ',
+            self.round,
         ]
         return ''.join(str_list)
