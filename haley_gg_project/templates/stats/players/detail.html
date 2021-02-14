@@ -1,22 +1,72 @@
 {% extends 'base.html' %} {% block content %} {% load static %}
 <div class="profile">
-    <div class="jumbotron rounded-0 text-secondary text-center {{ object.most_race }}">
+    <!--   Player   -->
+    <div class="jumbotron rounded-0 text-secondary text-center {{ player.most_race }}">
         <div class="h1">
-            {{ object.name }}
-            <span class="h4 text-secondary">{{ object.most_race }}</span>
+            {{ player.name }}
+            <span class="h4 text-secondary">{{ player.most_race }}</span>
         </div>
-        <small class="text-secondary">{{ object.joined_date }}에 가입</small>
+        <small class="text-secondary">{{ player.joined_date }}에 가입</small>
     </div>
-    <hr>
-    <div class="h2 m-3">최근 전적</div>
-    <div class="">
-        {% include 'stats/results/list.html' %}
-    </div>
+
+    <!--   Career   -->
     <hr>
     <div class="h2 m-3">커리어</div>
     <div class="jumbotron rounded-0 ">
-        {{ object.career }}
+        {{ player.career }}
+    </div>
+        
+    <!--   Recent Results   -->
+    <hr>
+    <div class="m-3">
+        <div class="h2">
+            최근 전적
+            <span class="h4">
+                총 승률 : {{ win_rate }}%
+            </span>
+        </div>
+    </div>
+    <table class="table table-hover text-center">
+        <tbody>
+            {% for key, results in result_dict.items %}
+                <tr>
+                    <td class="align-middle">{{ results.0.date }}</td>
+                    <td class="align-middle">{{ results.0.league }}</td>
+                    <td class="align-middle">{{ results.0.title }}</td>
+                    <td class="align-middle">{{ results.0.round }}</td>
+                    <td class="align-middle">
+                        {% for result in results %}
+                            <a href="{{ result.player.get_absolute_url}}"
+                               class="
+                                {% if result.player.name == player.name %}
+                                    text-primary
+                                {% endif %}"
+                               >
+                                {{ result.player }}&nbsp;{{ result.race }}
+                            </a>
+                            {% if result.win_state %}
+                                (승)
+                            {% else %}
+                                (패)
+                            {% endif %}
+                            <br>
+                        {% endfor %}
+                    </td>
+                    <td class="align-middle">{{ results.0.map }}</td>
+                    <td class="align-middle">{{ results.0.remark }}</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <!--   Win rate by race   -->
+    <hr>
+    <div class="h2">
+        종족별 승률
+    </div>
+    <div class="">
+        {% for key, value in win_rate_by_race_dict.items %}
+            {{ key }} : {{ value }}<br>
+        {% endfor %}
     </div>
 </div>
-<hr>
 {% endblock content %}

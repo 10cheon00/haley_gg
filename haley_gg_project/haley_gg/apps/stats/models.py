@@ -1,8 +1,10 @@
 from django.db import models
+from django.db.models import Count, Q
 from django.utils import timezone
 from django.shortcuts import reverse
 
-from haley_gg.apps.stats.utils import slugify, remove_space
+from haley_gg.apps.stats.managers import MeleeManager
+from haley_gg.apps.stats.utils import slugify, remove_space, get_rate
 
 
 class Player(models.Model):
@@ -40,8 +42,67 @@ class Player(models.Model):
     def get_absolute_url(self):
         return reverse('stats:player', kwargs={'name': self.name})
 
+    def get_statistics(self):
+        """
+        총 승률
+        최근 10경기 승률
+        종족별 승률
+        """
 
-# Maybe, this model will be have op 8 players, or team.
+        # Win rate of total results.
+        queryset = Result.objects.values(
+            'player'
+        ).order_by('player').annotate(
+            result_count=Count('id'),
+            win_count=Count(
+                'id',
+                filter=Q(win_state='t')
+            )
+        ).filter(player=self).first()
+        win_rate = get_rate(queryset['win_count'], queryset['result_count'])
+
+        # Win rate by race.
+        result_list = Result.melee.all().values()
+        win_rate_by_race_dict = {
+            'T': {  # Player's race
+                'T':  # Opponent's race
+                [0,  # win_count
+                 0],  # result_count
+                'Z': [0, 0], 'P': [0, 0]},
+            'Z': {'T': [0, 0], 'Z': [0, 0], 'P': [0, 0]},
+            'P': {'T': [0, 0], 'Z': [0, 0], 'P': [0, 0]}
+        }
+        for result in self.results.filter(type='melee'):
+            opponent_index = 0
+            for index, r in enumerate(result_list):
+                # false = 0, true = 1
+                if r['id'] == result.id + int(result.win_state):
+                    opponent_index = index
+                    break
+
+            if result.win_state:
+                # Plus 1 to win count if win state is true.
+                win_rate_by_race_dict[result.race][
+                    result_list[opponent_index]['race']
+                ][0] += 1
+            # Plus 1 for count results.
+            win_rate_by_race_dict[result.race][
+                result_list[opponent_index]['race']
+            ][1] += 1
+
+        races = ['T', 'Z', 'P']
+        for player in races:
+            for opponent in races:
+                data = win_rate_by_race_dict[player][opponent]
+                data.append(get_rate(data[0], data[1]))
+
+        statistic_dict = {
+            'win_rate': win_rate,
+            'win_rate_by_race_dict': win_rate_by_race_dict
+        }
+        return statistic_dict
+
+
 class League(models.Model):
     name = models.CharField(
         default='',
@@ -91,7 +152,7 @@ class ProleagueTeam(models.Model):
         League,
         on_delete=models.CASCADE,
         limit_choices_to={'type': 'proleague'},
-        related_name='team_list'
+        related_name='teams'
     )
     players = models.ManyToManyField(
         Player
@@ -153,7 +214,7 @@ class Result(models.Model):
     league = models.ForeignKey(
         League,
         on_delete=models.CASCADE,
-        related_name='result_list'
+        related_name='results'
     )
 
     title = models.CharField(
@@ -181,7 +242,8 @@ class Result(models.Model):
 
     player = models.ForeignKey(
         Player,
-        on_delete=models.CASCADE
+        on_delete=models.CASCADE,
+        related_name='results'
     )
 
     race = models.CharField(
@@ -202,6 +264,9 @@ class Result(models.Model):
         null=True,
         blank=True,
     )
+
+    objects = models.Manager()
+    melee = MeleeManager()
 
     class Meta:
         ordering = [

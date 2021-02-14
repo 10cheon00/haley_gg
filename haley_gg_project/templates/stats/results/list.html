@@ -1,49 +1,46 @@
-<ul class='list-group'>
-    {% for key, results in result_dict.items %}
-        <li class='list-group-item'>
-            <div class='d-flex justify-content-between align-items-center'>
-                <!--   league   -->
-                <div class='text-center'>
-                    {{ results.0.league }}
-                    <br>
-                    <small class='text-secondary text-center'>
-                        {{ results.0.title }}&nbsp;{{ results.0.round }}
-                    </small>
-                </div>
+<!--   Rendering with grouped results.   -->
 
-                <!--   result data   -->
-                <div class='d-flex justify-content-between'>
-                    <div class='order-1'>
-                        {{ results.0.map }}
-                    </div>
-                    <div>
-                        {% for result in results %}
-                            <!--   player name and race   -->
-                            <a href='{{ result.player.get_absolute_url }}'>
-                                {{ result.player }}&nbsp;({{ result.race }})
-                            </a>
-                            &nbsp;
-
-                            {% if result.win_state %}
-                                <div class='badge badge-primary'>W</div>
-                            {% else %}
-                                <div class='badge badge-danger'>L</div>
-                            {% endif %}
-                            <br>
-                        {% endfor %}
-                    </div>
-                    <div>
-                         {{ results.0.remark }}
-                    </div>
-                </div>
-
-                <!--   date   -->
-                <div class='text-secondary'>
-                    <small>
-                        {{ results.0.date }}
-                    </small>
-                </div> 
-            </div>
-        </li>
-    {% endfor %}
-</ul>
+<table class="table table-hover text-center">
+    
+    <thead class="thead">
+        <tr>
+            <th scope="col">Date</th>
+            <th scope="col">League</th>
+            <th scope="col">Title</th>
+            <th scope="col">Round</th>
+            <th scope="col">Players</th>
+            <th scope="col">Map</th>
+            <th scope="col">추가</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for key, results in result_dict.items %}
+            <tr>
+                <td class="align-middle">{{ results.0.date }}</td>
+                <td class="align-middle">{{ results.0.league }}</td>
+                <td class="align-middle">{{ results.0.title }}</td>
+                <td class="align-middle">{{ results.0.round }}</td>
+                <td class="align-middle">
+                    {% for result in results %}
+                        <a href="{{ result.player.get_absolute_url}}"
+                           class="
+                            {% if result.player.name == player.name %}
+                                text-primary
+                            {% endif %}"
+                           >
+                            {{ result.player }}&nbsp;{{ result.race }}
+                        </a>
+                        {% if result.win_state %}
+                            (승)
+                        {% else %}
+                            (패)
+                        {% endif %}
+                        <br>
+                    {% endfor %}
+                </td>
+                <td class="align-middle">{{ results.0.map }}</td>
+                <td class="align-middle">{{ results.0.remark }}</td>
+            </tr>
+        {% endfor %}
+    </tbody>
+</table>

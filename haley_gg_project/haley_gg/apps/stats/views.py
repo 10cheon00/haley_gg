@@ -2,24 +2,11 @@ from django.shortcuts import render, redirect, reverse, get_object_or_404
 from django.views.generic import TemplateView, View, ListView, DetailView
 
 from haley_gg.apps.stats.models import Result, League, Player
-from haley_gg.apps.stats.forms import get_pvp_data_formset
-from haley_gg.apps.stats.forms import ResultForm
-from haley_gg.apps.stats.utils import remove_space
+from haley_gg.apps.stats.forms import get_pvp_data_formset, ResultForm
+from haley_gg.apps.stats.utils import remove_space, get_grouped_results
 
 
-class GroupedResultMixin(object):
-    def get_grouped_results(self, queryset):
-        # Group result data by result name.
-        grouped_result_dict = {}
-        for result in queryset:
-            name = result.match_name()
-            if name not in grouped_result_dict:
-                grouped_result_dict[name] = []
-            grouped_result_dict[name].append(result)
-        return grouped_result_dict
-
-
-class ResultListView(GroupedResultMixin, ListView):
+class ResultListView(ListView):
     template_name = 'stats/results/list.html'
     model = Result
 
@@ -30,7 +17,7 @@ class ResultListView(GroupedResultMixin, ListView):
             'league',
             'player'
         )
-        context['result_list'] = self.get_grouped_results(queryset)
+        context['result_list'] = get_grouped_results(queryset)
         return context
 
 
@@ -67,19 +54,21 @@ class ProleagueView(TemplateView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['league_list'] = League.objects.filter(
+        league_list = League.objects.filter(
             type="proleague"
         ).prefetch_related(
-            'team_list',
-            'result_list',
-            'result_list__map',
-            'result_list__league',
-            'result_list__player',
+            'teams',
+            'results',
+            'results__map',
+            'results__player',
         )
+        for league in league_list:
+            results = get_grouped_results(league.results.all())
+        context['league_list'] = league_list
         return context
 
 
-class PlayerDetailView(GroupedResultMixin, DetailView):
+class PlayerDetailView(DetailView):
     model = Player
     template_name = 'stats/players/detail.html'
 
@@ -105,8 +94,13 @@ class PlayerDetailView(GroupedResultMixin, DetailView):
             'league',
             'player'
         )
-        result_dict = self.get_grouped_results(queryset)
-        for key, results in result_dict.items():
+        result_dict = get_grouped_results(queryset)
+        for key in list(result_dict.keys()):
             # If grouped_result_list not contain this player, remove it.
-            pass
+            if self.object not in (result.player for result in result_dict[key]):
+                del result_dict[key]
+
+        context['result_dict'] = result_dict
+        context.update(self.object.get_statistics())
         return context
+

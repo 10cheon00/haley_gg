@@ -56,7 +56,9 @@
                 </div>
             {% endfor %}
             <!--   Results   -->
-            {% for result in league.result_list.all %}
+            
+            
+            {% for result in league.results.all %}
                 {{ result }}
                 <br>
             {% endfor %}
