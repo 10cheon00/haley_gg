@@ -1,0 +1,13 @@
+{% extends 'base.html' %}
+
+{% block active_map %}active{% endblock active_map %}
+
+{% block content %}
+
+{% for map in maps %}
+    <a href="{{ map.get_absolute_url }}">
+        {{ map }}&nbsp;{{ map.result_count }}
+    </a>
+    <br>
+{% endfor %}
+{% endblock content %}

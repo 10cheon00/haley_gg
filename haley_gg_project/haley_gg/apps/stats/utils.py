@@ -66,11 +66,6 @@ def get_win_rate(results):
     """
     Get rate from result model with is_win field.
     """
-    print(results.annotate(
-        win_rate=Avg(
-            Cast('is_win', output_field=IntegerField()) * 100
-        )
-    ))
     return results.annotate(
         win_rate=Avg(
             Cast('is_win', output_field=IntegerField()) * 100

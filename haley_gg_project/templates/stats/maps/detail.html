@@ -1,0 +1,15 @@
+{% extends 'base.html' %}
+
+{% block active_map %}active{% endblock active_map %}
+
+{% block content %}
+{{ object }}<br>
+<br>
+{% for key, value in win_rate_by_race.items %}
+    {{ key }} : {{ value }}<br>
+{% endfor %}
+<br>
+{% for player in top_5_players %}
+    {{ player.player__name }} : {{ player.win_rate }} ( {{ player.result_count }} )<br>
+{% endfor %}
+{% endblock content %}
