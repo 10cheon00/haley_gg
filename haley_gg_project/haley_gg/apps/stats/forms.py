@@ -2,9 +2,29 @@ from django import forms
 from django.forms import formset_factory
 from django.db.models import Q
 
-from haley_gg.apps.stats.models import (
-    Player, Map, Result, League, ProleagueTeam
-)
+from haley_gg.apps.stats.models import Player
+from haley_gg.apps.stats.models import Map
+from haley_gg.apps.stats.models import Result
+from haley_gg.apps.stats.models import League
+from haley_gg.apps.stats.models import ProleagueTeam
+from haley_gg.apps.stats.utils import remove_space
+
+
+class SearchPlayerForm(forms.Form):
+    name = forms.CharField(
+        label='Player',
+        widget=forms.TextInput(
+            attrs={
+                'type': 'text',
+                'class': 'form-control'
+            }
+        )
+    )
+
+    def clean_name(self):
+        name = self.cleaned_data.get('name')
+        name = remove_space(name)
+        return name
 
 
 class ResultForm(forms.Form):
@@ -110,10 +130,10 @@ class PVPDataForm(forms.Form):
         widget=forms.TextInput(
             attrs={
                 'class': 'form-control',
-                'required': 'false',
                 'placeholder': '특이사항 ex)기권승'
             }
         ),
+        required=False
     )
 
     def clean(self):
@@ -137,9 +157,11 @@ class PVPDataFormSet(forms.BaseFormSet):
         return super().is_valid()
 
     def clean(self):
-        # 1. Group results by round data.
-        # 1.1 If current result already exists, pass.
-        # 2. If result's type is teamplay, check grouped teamplay data are validate.
+        """
+        1. Group results by round data.
+        1.1 If current result already exists, pass.
+        2. If result's type is teamplay, check grouped teamplay data are validate.
+        """
 
         super().clean()
 
@@ -198,14 +220,16 @@ class PVPDataFormSet(forms.BaseFormSet):
                     form.add_error('loser', duplicate_error_msg)
 
     def save_with(self, ResultForm):
-        # To create result data, we use form, not modelform.
-        # Q: Why don't you use ModelForm?
-        # A: Because modelform can't satisfy my result model.
-        # This form have field that winner and loser,
-        # but Result model only has one player.
-        # And it doesn't care who is winner. Just it has win_status.
-        # So we create two result data related winner and loser,
-        # but modelform only create one data. So, I use form, not modelform.
+        """
+        To create result data, I use form, not modelform.
+        Q: Why don't you use ModelForm?
+        A: Because modelform can't satisfy my result model.
+        This form have field that winner and loser,
+        but Result model only has one player.
+        And it doesn't care who is winner. Just it has win_status.
+        So I create two result data related winner and loser,
+        but modelform only create one data. So, I use form, not modelform.
+        """
 
         # It works fine, but using modelform is standardly recommand.
         date = ResultForm.cleaned_data.get('date')
@@ -225,7 +249,11 @@ class PVPDataFormSet(forms.BaseFormSet):
                     type=cleaned_data.get('type'),
                     player=cleaned_data.get('winner'),
                     race=cleaned_data.get('winner_race'),
-                    win_state=True
+                    player_a=cleaned_data.get('winner'),
+                    player_b=cleaned_data.get('loser'),
+                    player_a_race=cleaned_data.get('winner_race'),
+                    player_b_race=cleaned_data.get('loser_race'),
+                    is_win=True
                 ),
                 Result(
                     date=date,
@@ -236,7 +264,11 @@ class PVPDataFormSet(forms.BaseFormSet):
                     type=cleaned_data.get('type'),
                     player=cleaned_data.get('loser'),
                     race=cleaned_data.get('loser_race'),
-                    win_state=False
+                    player_a=cleaned_data.get('winner'),
+                    player_b=cleaned_data.get('loser'),
+                    player_a_race=cleaned_data.get('winner_race'),
+                    player_b_race=cleaned_data.get('loser_race'),
+                    is_win=False
                 )]
             )
         Result.objects.bulk_create(result_list)
@@ -245,10 +277,12 @@ class PVPDataFormSet(forms.BaseFormSet):
         for result in result_list:
             # Calculate team status.
 
-            # 1. Get a league in resultForm.
-            # 2. If it is not proleague, continue to other result.
-            # 3. Get team associated player in result.
-            # 4. Save current result to team.
+            """
+            1. Get a league in resultForm.
+            2. If it is not proleague, continue to other result.
+            3. Get team associated player in result.
+            4. Save current result to team.
+            """
             if league.type != 'proleague':
                 continue
 

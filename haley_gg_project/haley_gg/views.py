@@ -1,19 +1,20 @@
 from django.shortcuts import render, reverse
 from django.http import HttpResponseRedirect
 
-# from .apps.stats.forms import SearchUserForm
+from haley_gg.apps.stats.forms import SearchPlayerForm
 
 
 def main_page(request):
-    # form = SearchUserForm(request.GET or None)
-    # if form.is_valid():
-    #     return HttpResponseRedirect(
-    #         reverse(
-    #             "stats:users_detail",
-    #             kwargs={"name": form.cleaned_data['user_name']}
-    #         )
-    #     )
+    form = SearchPlayerForm(request.GET or None)
+    if form.is_valid():
+        # If there is no matched player... What to do?
+        return HttpResponseRedirect(
+            reverse(
+                'stats:player',
+                kwargs={'name': form.cleaned_data['name']}
+            )
+        )
     context = {
-        # 'search_form': form
+        'search_player_form': form
     }
     return render(request, "main-page.html", context)

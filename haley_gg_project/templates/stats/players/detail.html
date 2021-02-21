@@ -26,38 +26,8 @@
             </span>
         </div>
     </div>
-    <table class="table table-hover text-center">
-        <tbody>
-            {% for key, results in result_dict.items %}
-                <tr>
-                    <td class="align-middle">{{ results.0.date }}</td>
-                    <td class="align-middle">{{ results.0.league }}</td>
-                    <td class="align-middle">{{ results.0.title }}</td>
-                    <td class="align-middle">{{ results.0.round }}</td>
-                    <td class="align-middle">
-                        {% for result in results %}
-                            <a href="{{ result.player.get_absolute_url}}"
-                               class="
-                                {% if result.player.name == player.name %}
-                                    text-primary
-                                {% endif %}"
-                               >
-                                {{ result.player }}&nbsp;{{ result.race }}
-                            </a>
-                            {% if result.win_state %}
-                                (승)
-                            {% else %}
-                                (패)
-                            {% endif %}
-                            <br>
-                        {% endfor %}
-                    </td>
-                    <td class="align-middle">{{ results.0.map }}</td>
-                    <td class="align-middle">{{ results.0.remark }}</td>
-                </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+    {% include 'stats/results/list.html' %}
+
     <!--   Win rate by race   -->
     <hr>
     <div class="h2">

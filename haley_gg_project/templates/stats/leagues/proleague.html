@@ -1,10 +1,12 @@
 {% extends 'base.html' %}
+
 {% block active_proleague %}active{% endblock active_proleague %}
+
 {% block content %}
 <div class="h3">프로리그 현황</div>
 <!--   League Selector   -->
 <ul class="nav nav-tabs">
-    {% for league in league_list %}
+    {% for league in leagues %}
         <li class="nav-item">
             <a class="nav-link {% if forloop.counter == 1 %}active{% endif %}" 
                data-toggle="tab"
@@ -14,54 +16,44 @@
         </li>
     {% endfor %}
 </ul>
+<br>
 <!--   League content   -->
 <div class="tab-content">
-    {% for league in league_list %}
+    {% for league, result_dict in league_list %}
         <div class="tab-pane {% if forloop.counter == 1 %}show active{% endif %}" 
              id="{{ league.slugify_str }}">
             <!--   Team ranks   -->
-            {% for team in league.team_list.all %}
-                <!--   Team list grouped by league   -->
-                <!--   This content style is table.   -->
-                <div class="row text-center">
-                    <div class="col">
-                        {{ team.name }}
-                    </div>
-                    <div class="col">
-                        points<br/>
-                        {{ team.points }}
-                    </div>
-                    <div class="col">
-                        win<br/>
-                    </div>
-                    <div class="col">
-                        lose<br/>
-                    </div>
-                    <div class="col">
-                        melee_win<br/>
-                        {{ team.melee_win_counts }}
-                    </div>
-                    <div class="col">
-                        melee_lose<br/>
-                        {{ team.melee_lose_counts }}
-                    </div>
-                    <div class="col">
-                        top_and_bottom_win<br/>
-                        {{ team.top_and_bottom_win_counts }}
-                    </div>
-                    <div class="col">
-                        top_and_bottom_lose<br/>
-                        {{ team.top_and_bottom_lose_counts }}
-                    </div>
-                </div>
-            {% endfor %}
+            <table class="table text-center">
+                <thead>
+                    <tr>
+                        <td>Team name</td>
+                        <td>Points</td>
+                        <td>Win</td>
+                        <td>Lose</td>
+                        <td>Win (Melee)</td>
+                        <td>Lose (Melee)</td>
+                        <td>Win (Top and Bottom)</td>
+                        <td>Lose (Top and Bottom)</td>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for team in league.teams.all %}
+                        <tr>
+                            <td>{{ team.name }}</td>
+                            <td>{{ team.points }}</td>
+                            <td>{{ team.get_total_win }}</td>
+                            <td>{{ team.get_total_lose }}</td>
+                            <td>{{ team.melee_win }}</td>
+                            <td>{{ team.melee_lose }}</td>
+                            <td>{{ team.top_and_bottom_win }}</td>
+                            <td>{{ team.top_and_bottom_lose }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            
             <!--   Results   -->
-            
-            
-            {% for result in league.results.all %}
-                {{ result }}
-                <br>
-            {% endfor %}
+            {% include 'stats/results/list.html' %}
         </div>
     {% endfor %}
 </div>

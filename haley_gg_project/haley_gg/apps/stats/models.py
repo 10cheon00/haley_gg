@@ -1,10 +1,17 @@
 from django.db import models
-from django.db.models import Count, Q
+from django.db.models import Count
 from django.utils import timezone
 from django.shortcuts import reverse
 
+
 from haley_gg.apps.stats.managers import MeleeManager
-from haley_gg.apps.stats.utils import slugify, remove_space, get_rate
+from haley_gg.apps.stats.utils import slugify
+from haley_gg.apps.stats.utils import remove_space
+# from haley_gg.apps.stats.utils import calculate_percentage
+from haley_gg.apps.stats.utils import get_win_rate
+from haley_gg.apps.stats.utils import get_grouped_RaceAndWinState
+from haley_gg.apps.stats.utils import get_sum_of_RaceAndWinStates
+from haley_gg.apps.stats.utils import get_total_sum_of_RaceAndWinStates
 
 
 class Player(models.Model):
@@ -48,57 +55,23 @@ class Player(models.Model):
         최근 10경기 승률
         종족별 승률
         """
+        # If no results from player, below sequences are skipped.
+        if not self.results.exists():
+            return {}
 
         # Win rate of total results.
-        queryset = Result.objects.values(
-            'player'
-        ).order_by('player').annotate(
-            result_count=Count('id'),
-            win_count=Count(
-                'id',
-                filter=Q(win_state='t')
-            )
-        ).filter(player=self).first()
-        win_rate = get_rate(queryset['win_count'], queryset['result_count'])
+        win_rate = get_win_rate(
+            Result.objects.values('player').order_by('player')
+        ).filter(  # filter for this player.
+            player=self
+        ).first()['win_rate']
 
-        # Win rate by race.
-        result_list = Result.melee.all().values()
-        win_rate_by_race_dict = {
-            'T': {  # Player's race
-                'T':  # Opponent's race
-                [0,  # win_count
-                 0],  # result_count
-                'Z': [0, 0], 'P': [0, 0]},
-            'Z': {'T': [0, 0], 'Z': [0, 0], 'P': [0, 0]},
-            'P': {'T': [0, 0], 'Z': [0, 0], 'P': [0, 0]}
-        }
-        for result in self.results.filter(type='melee'):
-            opponent_index = 0
-            for index, r in enumerate(result_list):
-                # false = 0, true = 1
-                if r['id'] == result.id + int(result.win_state):
-                    opponent_index = index
-                    break
-
-            if result.win_state:
-                # Plus 1 to win count if win state is true.
-                win_rate_by_race_dict[result.race][
-                    result_list[opponent_index]['race']
-                ][0] += 1
-            # Plus 1 for count results.
-            win_rate_by_race_dict[result.race][
-                result_list[opponent_index]['race']
-            ][1] += 1
-
-        races = ['T', 'Z', 'P']
-        for player in races:
-            for opponent in races:
-                data = win_rate_by_race_dict[player][opponent]
-                data.append(get_rate(data[0], data[1]))
-
+        count_dict = get_sum_of_RaceAndWinStates(
+            get_grouped_RaceAndWinState(Result.melee.all())[self.name]
+        )
         statistic_dict = {
             'win_rate': win_rate,
-            'win_rate_by_race_dict': win_rate_by_race_dict
+            'win_rate_by_race_dict': count_dict
         }
         return statistic_dict
 
@@ -136,10 +109,38 @@ class Map(models.Model):
     )
 
     class Meta:
-        ordering = ['-name']
+        ordering = ['name']
 
     def __str__(self):
         return self.name
+
+    def get_absolute_url(self):
+        return reverse('stats:map', kwargs={'name': self.name})
+
+    def get_statistics(self):
+        # Get all rate by race
+        # Need exception for teamplay map.
+
+        results = self.results.all()
+
+        # Get Top 5 player rate on this map.
+        top_5_players = get_win_rate(
+            self.results.values(
+                'player__name'
+            ).order_by(
+                'player__name'
+            ).annotate(
+                # Add criteria for same rate player.
+                result_count=Count('id')
+            )
+        ).order_by('-win_rate', '-result_count')[:5]
+
+        return {
+            'win_rate_by_race': get_total_sum_of_RaceAndWinStates(
+                results
+            ),
+            'top_5_players': top_5_players
+        }
 
 
 class ProleagueTeam(models.Model):
@@ -161,16 +162,16 @@ class ProleagueTeam(models.Model):
     points = models.SmallIntegerField(
         default=0
     )
-    melee_win_counts = models.PositiveSmallIntegerField(
+    melee_win = models.PositiveSmallIntegerField(
         default=0
     )
-    melee_lose_counts = models.PositiveSmallIntegerField(
+    melee_lose = models.PositiveSmallIntegerField(
         default=0
     )
-    top_and_bottom_win_counts = models.PositiveSmallIntegerField(
+    top_and_bottom_win = models.PositiveSmallIntegerField(
         default=0
     )
-    top_and_bottom_lose_counts = models.PositiveSmallIntegerField(
+    top_and_bottom_lose = models.PositiveSmallIntegerField(
         default=0
     )
 
@@ -184,28 +185,28 @@ class ProleagueTeam(models.Model):
 
     # update counts.
     def save_result(self, result):
-        if result.win_state:
+        if result.is_win:
             self.points += 1
         else:
             self.points -= 1
 
         if result.type == 'melee':
-            if result.win_state:
-                self.melee_win_counts += 1
+            if result.is_win:
+                self.melee_win += 1
             else:
-                self.melee_lose_counts += 1
+                self.melee_lose += 1
         else:
-            if result.win_state:
-                self.top_and_bottom_win_counts += 1
+            if result.is_win:
+                self.top_and_bottom_win += 1
             else:
-                self.top_and_bottom_lose_counts += 1
+                self.top_and_bottom_lose += 1
         self.save()
 
     def get_total_win(self):
-        return self.melee_win_counts + self.top_and_bottom_win_counts
+        return self.melee_win + self.top_and_bottom_win
 
     def get_total_lose(self):
-        return self.melee_lose_counts + self.top_and_bottom_lose_counts
+        return self.melee_lose + self.top_and_bottom_lose
 
 
 class Result(models.Model):
@@ -229,6 +230,7 @@ class Result(models.Model):
 
     map = models.ForeignKey(
         Map,
+        related_name='results',
         on_delete=models.CASCADE)
 
     type = models.CharField(
@@ -245,7 +247,6 @@ class Result(models.Model):
         on_delete=models.CASCADE,
         related_name='results'
     )
-
     race = models.CharField(
         default='',
         max_length=10,
@@ -255,8 +256,40 @@ class Result(models.Model):
             ('Z', 'Zerg'),
         )
     )
+    # for convinience.
+    player_a = models.ForeignKey(
+        Player,
+        on_delete=models.CASCADE,
+        related_name='results_player_a'
+    )
 
-    win_state = models.BooleanField(default=False)
+    player_b = models.ForeignKey(
+        Player,
+        on_delete=models.CASCADE,
+        related_name='results_player_b'
+    )
+
+    player_a_race = models.CharField(
+        default='',
+        max_length=10,
+        choices=(
+            ('T', 'Terran'),
+            ('P', 'Protoss'),
+            ('Z', 'Zerg'),
+        )
+    )
+
+    player_b_race = models.CharField(
+        default='',
+        max_length=10,
+        choices=(
+            ('T', 'Terran'),
+            ('P', 'Protoss'),
+            ('Z', 'Zerg'),
+        )
+    )
+
+    is_win = models.BooleanField(default=False)
 
     remarks = models.CharField(
         default='',
@@ -273,7 +306,7 @@ class Result(models.Model):
             '-date',
             '-title',
             '-round',
-            '-win_state',
+            '-is_win',
         ]
 
     def __str__(self):
