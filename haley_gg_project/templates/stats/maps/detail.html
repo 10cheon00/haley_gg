@@ -8,8 +8,16 @@
 {% for key, value in win_rate_by_race.items %}
     {{ key }} : {{ value }}<br>
 {% endfor %}
-<br>
-{% for player in top_5_players %}
+<br>승률 순위<br>
+{% for player in top_5_players.win_rate %}
     {{ player.player__name }} : {{ player.win_rate }} ( {{ player.result_count }} )<br>
+{% endfor %}
+<br>승수 순위<br>
+{% for player in top_5_players.win_count %}
+    {{ player.player__name }} : {{ player.win_count }}승<br>
+{% endfor %}
+<br>다전 순위<br>
+{% for player in top_5_players.result_count %}
+    {{ player.player__name }} : {{ player.result_count }}전<br>
 {% endfor %}
 {% endblock content %}

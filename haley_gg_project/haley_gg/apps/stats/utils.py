@@ -1,6 +1,8 @@
 from django.db.models import Avg
-from django.db.models.functions import Cast
+from django.db.models import Count
+from django.db.models import Sum
 from django.db.models import IntegerField
+from django.db.models.functions import Cast
 
 from haley_gg.apps.stats.utils_object import GroupedResults
 from haley_gg.apps.stats.utils_object import RaceAndWinState
@@ -27,7 +29,7 @@ def remove_space(text):
     return text.replace(' ', '')
 
 
-def get_grouped_results_with_match_name(results):
+def get_grouped_results_by_match_name(results):
     """
     Groups result data by match name.
     """
@@ -73,7 +75,52 @@ def get_win_rate(results):
     )
 
 
-def get_grouped_RaceAndWinState(results):
+def get_results_group_by_player_name(results):
+    """
+    Get results what grouped by player name.
+    """
+    return results.values('player__name').order_by('player__name')
+
+
+def get_players_result_count(results):
+    """
+    Get player's result count that grouped by its name.
+    """
+    return get_results_group_by_player_name(results).annotate(
+        # Add criteria for same rate player.
+        result_count=Count('id')
+    )
+
+
+def get_top_5_players_of_win_rate(results):
+    """
+    Get top 5 players of win rate.
+    """
+    return get_win_rate(
+        get_players_result_count(results)
+    ).order_by('-win_rate', '-result_count')[:5]
+
+
+def get_top_5_players_of_result_count(results):
+    """
+    Get top 5 players of result count.
+    """
+    return get_players_result_count(
+        results
+    ).order_by('-result_count')[:5]
+
+
+def get_top_5_players_of_win_count(results):
+    return get_results_group_by_player_name(
+        results
+    ).annotate(
+        win_count=Sum(
+            Cast('is_win', output_field=IntegerField())
+        )
+    ).order_by('-win_count')[:5]
+
+
+def get_grouped_RaceAndWinState_objects(results):
     """
     results을 RaceAndWinState형태로 전환한다.
     전환한 RaceAndWinState를 player name을 따라 분류한다.
@@ -139,7 +186,7 @@ def convert_RaceAndWinStates_to_WinAndResultCountByRace_object(
     return WinAndResultCountByRace_object
 
 
-def get_sum_of_RaceAndWinStates(grouped_RaceAndWinState_objects):
+def get_sum_of_RaceAndWinState_objects(grouped_RaceAndWinState_objects):
     """
     Add all WinAndResultCountByRace objects in grouped RaceAndWinState_objects.
     """
@@ -153,7 +200,7 @@ def get_sum_of_RaceAndWinStates(grouped_RaceAndWinState_objects):
     return sum_of_WinAndResultCountByRace_object
 
 
-def get_total_sum_of_RaceAndWinStates(results):
+def get_total_sum_of_RaceAndWinState_objects(grouped_RaceAndWinState_objects):
     """
     Calculate number of win, result counts in all results by relative race.
     Firstly, groups results by player name.
@@ -161,10 +208,9 @@ def get_total_sum_of_RaceAndWinStates(results):
     Lastly, returns added data in WinAndResultCountByRace type.
     """
     total_of_WinAndResultCountByRace_object = WinAndResultCountByRace()
-    grouped_RaceAndWinState = get_grouped_RaceAndWinState(results)
 
-    for grouped_RaceAndWinState_object in grouped_RaceAndWinState.values():
-        total_of_WinAndResultCountByRace_object += get_sum_of_RaceAndWinStates(
+    for grouped_RaceAndWinState_object in grouped_RaceAndWinState_objects.values():
+        total_of_WinAndResultCountByRace_object += get_sum_of_RaceAndWinState_objects(
             grouped_RaceAndWinState_object
         )
 

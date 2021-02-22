@@ -1,5 +1,4 @@
 from django.db import models
-from django.db.models import Count
 from django.utils import timezone
 from django.shortcuts import reverse
 
@@ -9,9 +8,14 @@ from haley_gg.apps.stats.utils import slugify
 from haley_gg.apps.stats.utils import remove_space
 # from haley_gg.apps.stats.utils import calculate_percentage
 from haley_gg.apps.stats.utils import get_win_rate
-from haley_gg.apps.stats.utils import get_grouped_RaceAndWinState
-from haley_gg.apps.stats.utils import get_sum_of_RaceAndWinStates
-from haley_gg.apps.stats.utils import get_total_sum_of_RaceAndWinStates
+from haley_gg.apps.stats.utils import get_grouped_RaceAndWinState_objects
+from haley_gg.apps.stats.utils import get_grouped_results_by_match_name
+from haley_gg.apps.stats.utils import get_sum_of_RaceAndWinState_objects
+from haley_gg.apps.stats.utils import get_total_sum_of_RaceAndWinState_objects
+from haley_gg.apps.stats.utils import get_top_5_players_of_win_rate
+from haley_gg.apps.stats.utils import get_top_5_players_of_win_count
+from haley_gg.apps.stats.utils import get_top_5_players_of_result_count
+from haley_gg.apps.stats.utils import get_results_group_by_player_name
 
 
 class Player(models.Model):
@@ -59,21 +63,16 @@ class Player(models.Model):
         if not self.results.exists():
             return {}
 
-        # Win rate of total results.
-        win_rate = get_win_rate(
-            Result.objects.values('player').order_by('player')
-        ).filter(  # filter for this player.
-            player=self
-        ).first()['win_rate']
-
-        count_dict = get_sum_of_RaceAndWinStates(
-            get_grouped_RaceAndWinState(Result.melee.all())[self.name]
-        )
-        statistic_dict = {
-            'win_rate': win_rate,
-            'win_rate_by_race_dict': count_dict
+        return {
+            'win_rate': get_win_rate(
+                get_results_group_by_player_name(self.results)
+            )[0]['win_rate'],
+            'win_rate_by_race_dict': get_sum_of_RaceAndWinState_objects(
+                get_grouped_RaceAndWinState_objects(
+                    Result.melee.all()
+                )[self.name]
+            )
         }
-        return statistic_dict
 
 
 class League(models.Model):
@@ -101,6 +100,41 @@ class League(models.Model):
     def slugify_str(self):
         return slugify(self.name)
 
+    @classmethod
+    def get_statistics(cls):
+        leagues = cls.objects.filter(
+            type='proleague'
+        ).prefetch_related(
+            'teams',
+            'results',
+            'results__map',
+            'results__player',
+        )
+        league_list = []
+        for league in leagues:
+            league_list.append({
+                'league': league,
+                'grouped_league_results': get_grouped_results_by_match_name(
+                    league.results.all()
+                ),
+                'race_relative_count':
+                get_total_sum_of_RaceAndWinState_objects(
+                    # it must be get melee results, but this code isn't!
+                    get_grouped_RaceAndWinState_objects(league.results.all())
+                ),
+                'top_5_players': {
+                    'win_count':
+                    get_top_5_players_of_win_count(league.results),
+                    'win_rate':
+                    get_top_5_players_of_win_rate(league.results),
+                    'result_count':
+                    get_top_5_players_of_result_count(league.results),
+                }
+            })
+        return {
+            'league_list': league_list,
+        }
+
 
 class Map(models.Model):
     name = models.CharField(
@@ -123,23 +157,18 @@ class Map(models.Model):
 
         results = self.results.all()
 
-        # Get Top 5 player rate on this map.
-        top_5_players = get_win_rate(
-            self.results.values(
-                'player__name'
-            ).order_by(
-                'player__name'
-            ).annotate(
-                # Add criteria for same rate player.
-                result_count=Count('id')
-            )
-        ).order_by('-win_rate', '-result_count')[:5]
+        # Get top 5 players of statistic items.
+        top_5_players = {
+            'win_rate': get_top_5_players_of_win_rate(self.results),
+            'win_count': get_top_5_players_of_win_count(self.results),
+            'result_count': get_top_5_players_of_result_count(self.results)
+        }
 
         return {
-            'win_rate_by_race': get_total_sum_of_RaceAndWinStates(
-                results
+            'win_rate_by_race': get_total_sum_of_RaceAndWinState_objects(
+                get_grouped_RaceAndWinState_objects(results)
             ),
-            'top_5_players': top_5_players
+            'top_5_players': top_5_players,
         }
 
 

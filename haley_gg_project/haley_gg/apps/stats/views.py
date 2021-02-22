@@ -15,7 +15,7 @@ from haley_gg.apps.stats.models import Player
 from haley_gg.apps.stats.forms import get_pvp_data_formset
 from haley_gg.apps.stats.forms import ResultForm
 from haley_gg.apps.stats.utils import remove_space
-from haley_gg.apps.stats.utils import get_grouped_results_with_match_name
+from haley_gg.apps.stats.utils import get_grouped_results_by_match_name
 from haley_gg.apps.stats.utils import get_grouped_results_that_has_player
 
 
@@ -30,7 +30,7 @@ class ResultListView(ListView):
             'league',
             'player'
         )
-        context['result_dict'] = get_grouped_results_with_match_name(queryset)
+        context['result_dict'] = get_grouped_results_by_match_name(queryset)
         return context
 
 
@@ -67,21 +67,7 @@ class ProleagueView(TemplateView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        leagues = League.objects.filter(
-            type='proleague'
-        ).prefetch_related(
-            'teams',
-            'results',
-            'results__map',
-            'results__player',
-        )
-        league_list = []
-        for league in leagues:
-            league_list.append(
-                (league, get_grouped_results_with_match_name(league.results.all()))
-            )
-        context['leagues'] = leagues
-        context['league_list'] = league_list
+        context['statistics'] = League.get_statistics()
         return context
 
 
@@ -112,7 +98,7 @@ class PlayerDetailView(DetailView):
             'player'
         )
         grouped_results_dict = get_grouped_results_that_has_player(
-            get_grouped_results_with_match_name(queryset), self.object.name
+            get_grouped_results_by_match_name(queryset), self.object.name
         )
         context['result_dict'] = grouped_results_dict
         context.update(self.object.get_statistics())

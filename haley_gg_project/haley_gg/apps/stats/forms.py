@@ -151,6 +151,8 @@ class PVPDataForm(forms.Form):
 
 
 class PVPDataFormSet(forms.BaseFormSet):
+    MELEE_PLAYER_LIMIT = 2
+
     def is_valid_with(self, resultForm):
         # Get resultForm data to check that data what formset have already exists.
         self.resultForm = resultForm
@@ -291,11 +293,14 @@ class PVPDataFormSet(forms.BaseFormSet):
                 Q(players__in=[result.player])
             ).first()
 
-            # To save win/lose result, check that result counts in list.
-            # If it lower than 2, append result.
-            if saved_result_list.count(result.round) < 2:
-                team.save_result(result)
-                saved_result_list.append(result.round)
+            if team:
+                # To save win/lose result, check that result counts in list.
+                # If it lower than MELEE_PLAYER_LIMIT, append result.
+                if saved_result_list.count(
+                    result.round
+                ) < self.MELEE_PLAYER_LIMIT:
+                    team.save_result(result)
+                    saved_result_list.append(result.round)
 
 
 def get_pvp_data_formset():
