@@ -3,21 +3,33 @@
 {% block active_map %}active{% endblock active_map %}
 
 {% block content %}
-{{ object }}<br>
+<div class="text-center">
+    {{ object }}
+</div>
 <br>
-{% for key, value in win_rate_by_race.items %}
-    {{ key }} : {{ value }}<br>
-{% endfor %}
-<br>승률 순위<br>
-{% for player in top_5_players.win_rate %}
-    {{ player.player__name }} : {{ player.win_rate }} ( {{ player.result_count }} )<br>
-{% endfor %}
-<br>승수 순위<br>
-{% for player in top_5_players.win_count %}
-    {{ player.player__name }} : {{ player.win_count }}승<br>
-{% endfor %}
-<br>다전 순위<br>
-{% for player in top_5_players.result_count %}
-    {{ player.player__name }} : {{ player.result_count }}전<br>
-{% endfor %}
+<div class="row d-flex text-center align-items-center">
+    <div class="col-md-3">
+        {% for data in win_rate_by_race.values %}
+            {{ data }}<br>
+        {% endfor %}
+    </div>
+    <div class="col-md-3">
+        승률 순위<br>
+        {% for player in top_5_players.win_rate %}
+            {{ player.player__name }} : {{ player.win_rate|floatformat:1 }} ( {{ player.result_count }} )<br>
+        {% endfor %}
+    </div>
+    <div class="col-md-3">
+        승수 순위<br>
+        {% for player in top_5_players.win_count %}
+            {{ player.player__name }} : {{ player.win_count }}승<br>
+        {% endfor %}
+    </div>
+    <div class="col-md-3">
+        다전 순위<br>
+        {% for player in top_5_players.result_count %}
+            {{ player.player__name }} : {{ player.result_count }}전<br>
+        {% endfor %}
+    </div>
+</div>
 {% endblock content %}

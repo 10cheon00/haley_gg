@@ -17,6 +17,7 @@ from haley_gg.apps.stats.forms import ResultForm
 from haley_gg.apps.stats.utils import remove_space
 from haley_gg.apps.stats.utils import get_grouped_results_by_match_name
 from haley_gg.apps.stats.utils import get_grouped_results_that_has_player
+from haley_gg.apps.stats.mixins import LeagueStatisticMixin
 
 
 class ResultListView(ListView):
@@ -62,13 +63,27 @@ class ResultCreateView(View):
         return render(request, self.template_name, context)
 
 
-class ProleagueView(TemplateView):
+class ProleagueView(LeagueStatisticMixin, TemplateView):
     template_name = 'stats/leagues/proleague.html'
+    queryset = League.objects.filter(
+        type='proleague'
+    ).prefetch_related(
+        'teams',
+        'results',
+        'results__map',
+        'results__player',
+    )
 
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['statistics'] = League.get_statistics()
-        return context
+
+class StarleagueView(LeagueStatisticMixin, TemplateView):
+    template_name = 'stats/leagues/starleague.html'
+    queryset = League.objects.filter(
+        type='starleague'
+    ).prefetch_related(
+        'results',
+        'results__map',
+        'results__player',
+    )
 
 
 class PlayerDetailView(DetailView):
@@ -111,10 +126,9 @@ class MapListView(ListView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        calculated_map = context['object_list'].annotate(
+        context['maps'] = context['object_list'].annotate(
             result_count=Count('results')/2
         ).order_by('-result_count', 'name')
-        context['maps'] = calculated_map
         # 맵리스트 표시, 형식은 자유
         # 맵마다 경기 수 표시
         return context

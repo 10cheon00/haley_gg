@@ -48,6 +48,9 @@
                                   {% block active_proleague %}{% endblock active_proleague %}" 
                            href="{% url 'stats:proleague' %}">프로리그</a>
                         <a class="nav-link nav-item 
+                                  {% block active_starleague %}{% endblock active_starleague %}" 
+                           href="{% url 'stats:starleague' %}">스타리그</a>
+                        <a class="nav-link nav-item 
                                   {% block active_map %}{% endblock active_map %}" 
                            href="{% url 'stats:map_list' %}">맵</a>
                     </div>

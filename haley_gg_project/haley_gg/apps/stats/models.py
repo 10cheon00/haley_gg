@@ -1,7 +1,7 @@
 from django.db import models
 from django.utils import timezone
 from django.shortcuts import reverse
-
+from django.db.models import Count
 
 from haley_gg.apps.stats.managers import MeleeManager
 from haley_gg.apps.stats.utils import slugify
@@ -62,11 +62,10 @@ class Player(models.Model):
         # If no results from player, below sequences are skipped.
         if not self.results.exists():
             return {}
-
         return {
             'win_rate': get_win_rate(
                 get_results_group_by_player_name(self.results)
-            )[0]['win_rate'],
+            ).first()['win_rate'],
             'win_rate_by_race_dict': get_sum_of_RaceAndWinState_objects(
                 get_grouped_RaceAndWinState_objects(
                     Result.melee.all()
@@ -101,38 +100,36 @@ class League(models.Model):
         return slugify(self.name)
 
     @classmethod
-    def get_statistics(cls):
-        leagues = cls.objects.filter(
-            type='proleague'
-        ).prefetch_related(
-            'teams',
-            'results',
-            'results__map',
-            'results__player',
-        )
+    def get_league_statistics(cls, leagues):
         league_list = []
         for league in leagues:
-            league_list.append({
-                'league': league,
-                'grouped_league_results': get_grouped_results_by_match_name(
-                    league.results.all()
-                ),
-                'race_relative_count':
-                get_total_sum_of_RaceAndWinState_objects(
-                    # it must be get melee results, but this code isn't!
-                    get_grouped_RaceAndWinState_objects(league.results.all())
-                ),
-                'top_5_players': {
-                    'win_count':
-                    get_top_5_players_of_win_count(league.results),
-                    'win_rate':
-                    get_top_5_players_of_win_rate(league.results),
-                    'result_count':
-                    get_top_5_players_of_result_count(league.results),
-                }
-            })
+            league_list.append(league.get_statistics())
         return {
+            'leagues': leagues,
             'league_list': league_list,
+        }
+
+    def get_statistics(self):
+        # it must be get melee results, but this code isn't!
+        league_results = self.results.all()
+        league_melee_results = self.results.filter(type="melee")
+        return {
+            'grouped_league_results':
+            get_grouped_results_by_match_name(
+                league_results
+            ),
+            'race_relative_count':
+            get_total_sum_of_RaceAndWinState_objects(
+                get_grouped_RaceAndWinState_objects(league_melee_results)
+            ),
+            'top_5_players': {
+                'win_count':
+                get_top_5_players_of_win_count(league_melee_results),
+                'win_rate':
+                get_top_5_players_of_win_rate(league_melee_results),
+                'result_count':
+                get_top_5_players_of_result_count(league_melee_results),
+            }
         }
 
 
@@ -155,18 +152,18 @@ class Map(models.Model):
         # Get all rate by race
         # Need exception for teamplay map.
 
-        results = self.results.all()
+        melee_results = self.results.filter(type="melee")
 
         # Get top 5 players of statistic items.
         top_5_players = {
-            'win_rate': get_top_5_players_of_win_rate(self.results),
-            'win_count': get_top_5_players_of_win_count(self.results),
-            'result_count': get_top_5_players_of_result_count(self.results)
+            'win_rate': get_top_5_players_of_win_rate(melee_results),
+            'win_count': get_top_5_players_of_win_count(melee_results),
+            'result_count': get_top_5_players_of_result_count(melee_results)
         }
 
         return {
             'win_rate_by_race': get_total_sum_of_RaceAndWinState_objects(
-                get_grouped_RaceAndWinState_objects(results)
+                get_grouped_RaceAndWinState_objects(melee_results)
             ),
             'top_5_players': top_5_players,
         }

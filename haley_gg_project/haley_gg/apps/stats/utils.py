@@ -4,9 +4,9 @@ from django.db.models import Sum
 from django.db.models import IntegerField
 from django.db.models.functions import Cast
 
-from haley_gg.apps.stats.utils_object import GroupedResults
-from haley_gg.apps.stats.utils_object import RaceAndWinState
-from haley_gg.apps.stats.utils_object import WinAndResultCountByRace
+from haley_gg.apps.stats.utils_objects import GroupedResults
+from haley_gg.apps.stats.utils_objects import RaceAndWinState
+from haley_gg.apps.stats.utils_objects import WinAndResultCountByRace
 
 
 def slugify(text):
