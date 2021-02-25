@@ -215,3 +215,16 @@ def get_total_sum_of_RaceAndWinState_objects(grouped_RaceAndWinState_objects):
         )
 
     return total_of_WinAndResultCountByRace_object
+
+
+def get_streak(results):
+    """
+    Get streak in results.
+    """
+    streak = results.values('is_win').order_by().annotate(
+        count=Count('is_win')
+    )[1]
+    if streak['is_win']:
+        return f'{streak["count"]}연승'
+    else:
+        return f'{streak["count"]}연패'

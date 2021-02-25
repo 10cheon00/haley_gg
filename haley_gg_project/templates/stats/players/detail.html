@@ -15,14 +15,13 @@
     <div class="jumbotron rounded-0 ">
         {{ player.career }}
     </div>
-        
     <!--   Recent Results   -->
     <hr>
     <div class="m-3">
         <div class="h2">
             최근 전적
             <span class="h4">
-                총 승률 : {{ win_rate|floatformat:1 }}%
+                총 승률 : {{ win_rate|floatformat:1 }}%&nbsp;|&nbsp;{{ streak }}
             </span>
         </div>
     </div>
@@ -30,10 +29,10 @@
 
     <!--   Win rate by race   -->
     <hr>
-    <div class="h2">
-        종족별 승률
-    </div>
     <div class="">
+        <div class="h2">
+            종족별 승률
+        </div>
         {% for key, value in win_rate_by_race_dict.items %}
             {{ key }} : {{ value }}<br>
         {% endfor %}

@@ -1,7 +1,6 @@
 from django.db import models
 from django.utils import timezone
 from django.shortcuts import reverse
-from django.db.models import Count
 
 from haley_gg.apps.stats.managers import MeleeManager
 from haley_gg.apps.stats.utils import slugify
@@ -16,6 +15,7 @@ from haley_gg.apps.stats.utils import get_top_5_players_of_win_rate
 from haley_gg.apps.stats.utils import get_top_5_players_of_win_count
 from haley_gg.apps.stats.utils import get_top_5_players_of_result_count
 from haley_gg.apps.stats.utils import get_results_group_by_player_name
+from haley_gg.apps.stats.utils import get_streak
 
 
 class Player(models.Model):
@@ -62,6 +62,7 @@ class Player(models.Model):
         # If no results from player, below sequences are skipped.
         if not self.results.exists():
             return {}
+
         return {
             'win_rate': get_win_rate(
                 get_results_group_by_player_name(self.results)
@@ -70,7 +71,8 @@ class Player(models.Model):
                 get_grouped_RaceAndWinState_objects(
                     Result.melee.all()
                 )[self.name]
-            )
+            ),
+            'streak': get_streak(self.results),
         }
 
 
@@ -348,7 +350,8 @@ class Result(models.Model):
             self.player.__str__(),
             '(',
             self.race,
-            ')',
+            '):',
+            str(self.is_win),
         ]
         return ''.join(str_list)
 
