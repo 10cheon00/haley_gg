@@ -1,0 +1,60 @@
+{% extends 'base.html' %}
+{% block title %}Update Player - {{ object.name }}{% endblock title %}
+{% load static %}
+{% block content %}
+<div class='jumbotron'>
+    <div class='h3'>
+        플레이어 데이터 수정
+    </div>
+    <hr/>
+    뱃지로 표현하고 싶은 영역은 대괄호로 표시하세요.<br/>
+    <small class='text-secondary'>
+        Ex.<br/>
+        [HPL 시즌1 준우승] "아무개"팀 준우승(개인 3승 0패/ 팀플 4승 4패)<br/>
+        HPL 시즌1 팀플 다승 3위(4승 4패)<br/>
+        [HSL 시즌1 우승] 총 전적 14승 3패<br/>
+        결과물 : 
+        <div class="badge badge-info">HPL 시즌1 준우승</div>
+        <div class="badge badge-success">HSL 시즌1 우승</div>
+    </small>
+</div>
+<form method="POST">
+    {% csrf_token %}
+    <div class='form-row'>
+        <div class='form-group col'>
+            <label>{{ form.name.label }}</label>
+            {{ form.name }}
+            <small class='text-danger'>
+                {{ form.name.errors.as_text }}
+            </small>
+        </div>
+        <div class='form-group col'>
+            <label>{{ form.joined_date.label }}</label>
+            {{ form.joined_date }}
+            <small class='text-danger'>
+                {{ form.joined_date.errors.as_text }}
+            </small>
+        </div>
+        <div class='form-group col'>
+            <label>{{ form.most_race.label }}</label>
+            {{ form.most_race }}
+            <small class='text-danger'>
+                {{ form.most_race.errors.as_text }}
+            </small>
+        </div>
+    </div>
+    <div class='form-row'>
+        <div class='form-group col'>
+            <label>{{ form.career.label }}</label>
+            {{ form.career }}
+            <small class='text-danger'>
+                {{ form.career.errors.as_text }}
+            </small>
+        </div>
+    </div>
+    <div class='d-flex'>
+        <button class='ml-auto btn btn-success' type='submit'>Save</button>
+    </div>
+        
+</form>
+{% endblock content %}

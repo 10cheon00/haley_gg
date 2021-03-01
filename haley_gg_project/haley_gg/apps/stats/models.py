@@ -15,7 +15,8 @@ from haley_gg.apps.stats.utils import get_top_5_players_of_win_rate
 from haley_gg.apps.stats.utils import get_top_5_players_of_win_count
 from haley_gg.apps.stats.utils import get_top_5_players_of_result_count
 from haley_gg.apps.stats.utils import get_results_group_by_player_name
-from haley_gg.apps.stats.utils import get_streak
+# from haley_gg.apps.stats.utils import get_streak
+# from haley_gg.apps.stats.utils import streak_to_string
 
 
 class Player(models.Model):
@@ -174,7 +175,8 @@ class Map(models.Model):
         top_5_players = {
             'win_rate': get_top_5_players_of_win_rate(melee_results),
             'win_count': get_top_5_players_of_win_count(melee_results),
-            'result_count': get_top_5_players_of_result_count(melee_results)
+            'result_count': get_top_5_players_of_result_count(melee_results),
+            # 'melee_win_streak': get_streak(melee_results)
         }
 
         return {
