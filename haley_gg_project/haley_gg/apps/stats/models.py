@@ -39,6 +39,8 @@ class Player(models.Model):
 
     joined_date = models.DateField(default=timezone.now)
 
+    career = models.TextField(default="")
+
     class Meta:
         ordering = ['name']
 
@@ -72,7 +74,19 @@ class Player(models.Model):
                     Result.melee.all()
                 )[self.name]
             ),
-            'streak': get_streak(self.results),
+            # 'streak':
+        }
+
+    def get_career_and_badge(self):
+        import re
+        badges = re.findall(r'\[(.*?)\]', self.career)
+        converted_career = self.career.replace('[', '')
+        converted_career = converted_career.replace(']', '')
+        return {
+            'career': {
+                'badges': badges,
+                'converted_career': converted_career
+            }
         }
 
 

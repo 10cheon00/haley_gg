@@ -1,9 +1,7 @@
 {% extends 'base.html' %}
-{% load static %} 
-{% block header %}
-{{ block.super }}
-
-{% endblock header %} 
+{% load static %}
+{% block title %}전적추가{% endblock title %}
+{% block header %}{{ block.super }}{% endblock header %} 
 
 {% block content %}
 <div class='jumbotron'>
@@ -62,9 +60,7 @@
         {% endfor %}
     </div>
     <div class='d-flex justify-content-between'>
-        <button class='btn btn-success' type='submit'>
-            Save
-        </button>
+        <input type='button' class='btn btn-primary' value='Add More' id='add_more'/>
         <!--   Appendable form   -->
         <div id='empty_form' style='display:none'>
             <div class='form-row'>
@@ -88,8 +84,7 @@
                 </div>
             </div>
         </div>
-
-        <input type='button' class='btn btn-primary' value='Add More' id='add_more'/>
+        <button class='btn btn-success' type='submit'>Save</button>
     </div>
 </form>
 <script type='text/javascript'>

@@ -31,8 +31,8 @@
                             {% endif %}"
                            >
                             {{ result.player }}&nbsp;{{ result.race }}
+                            {% if result.is_win %}(승){% else %}(패){% endif %}
                         </a>
-                        {% if result.is_win %}(승){% else %}(패){% endif %}
                         <br>
                     {% endfor %}
                 </div>

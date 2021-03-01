@@ -11,6 +11,7 @@ urlpatterns = [
     path('proleague/', views.ProleagueView.as_view(), name='proleague'),
     path('starleague/', views.StarleagueView.as_view(), name='starleague'),
     path('player/<name>/', views.PlayerDetailView.as_view(), name='player'),
+    path('player/<name>/update', views.PlayerUpdateView.as_view(), name='update_player'),
     path('map/', views.MapListView.as_view(), name='map_list'),
     path('map/<name>/', views.MapDetailView.as_view(), name='map'),
 ]

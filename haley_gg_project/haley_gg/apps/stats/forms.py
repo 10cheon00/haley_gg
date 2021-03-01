@@ -27,6 +27,37 @@ class SearchPlayerForm(forms.Form):
         return name
 
 
+class UpdatePlayerForm(forms.ModelForm):
+    class Meta:
+        model = Player
+        fields = [
+            'name',
+            'joined_date',
+            'most_race',
+            'career',
+        ]
+        widgets = {
+            'name': forms.TextInput(
+                attrs={
+                    'type': 'text',
+                    'class': 'form-control',
+                }
+            ),
+            'joined_date': forms.NumberInput(
+                attrs={
+                    'type': 'date',
+                    'class': 'form-control',
+                }
+            ),
+            'most_race': forms.Select(
+                attrs={'class': 'form-control'}
+            ),
+            'career': forms.Textarea(
+                attrs={'class': 'form-control'}
+            )
+        }
+
+
 class ResultForm(forms.Form):
     date = forms.DateField(
         label='날짜',
