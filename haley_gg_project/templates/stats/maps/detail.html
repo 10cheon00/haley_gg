@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% block title %}Map&nbsp;-&nbsp;{{ object.name }}{% endblock title %}
+{% block title %}맵&nbsp;-&nbsp;{{ object.name }}{% endblock title %}
 {% block active_map %}active{% endblock active_map %}
 
 {% block content %}
@@ -7,29 +7,13 @@
     {{ object.name }}
 </div>
 <br>
-<div class="row d-flex text-center align-items-center">
-    <div class="col-md-3">
-        {% for data in win_rate_by_race.values %}
-            {{ data }}<br>
-        {% endfor %}
-    </div>
-    <div class="col-md-3">
-        승률 순위<br>
-        {% for player in top_5_players.win_rate %}
-            {{ player.player__name }} : {{ player.win_rate|floatformat:1 }} ( {{ player.result_count }} )<br>
-        {% endfor %}
-    </div>
-    <div class="col-md-3">
-        승수 순위<br>
-        {% for player in top_5_players.win_count %}
-            {{ player.player__name }} : {{ player.win_count }}승<br>
-        {% endfor %}
-    </div>
-    <div class="col-md-3">
-        다전 순위<br>
-        {% for player in top_5_players.result_count %}
-            {{ player.player__name }} : {{ player.result_count }}전<br>
-        {% endfor %}
-    </div>
+<div class="d-flex justify-content-center">
+    {% for data in win_rate_by_race.values %}
+        {{ data }}<br>
+    {% endfor %}
+</div>
+<hr>
+<div>
+    {% include 'stats/results/top_players.html' %}
 </div>
 {% endblock content %}

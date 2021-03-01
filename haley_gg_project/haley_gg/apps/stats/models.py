@@ -7,16 +7,13 @@ from haley_gg.apps.stats.utils import slugify
 from haley_gg.apps.stats.utils import remove_space
 # from haley_gg.apps.stats.utils import calculate_percentage
 from haley_gg.apps.stats.utils import get_win_rate
+from haley_gg.apps.stats.utils import get_grouped_results_dict_by_match_name
 from haley_gg.apps.stats.utils import get_grouped_RaceAndWinState_objects
-from haley_gg.apps.stats.utils import get_grouped_results_by_match_name
 from haley_gg.apps.stats.utils import get_sum_of_RaceAndWinState_objects
 from haley_gg.apps.stats.utils import get_total_sum_of_RaceAndWinState_objects
-from haley_gg.apps.stats.utils import get_top_5_players_of_win_rate
-from haley_gg.apps.stats.utils import get_top_5_players_of_win_count
-from haley_gg.apps.stats.utils import get_top_5_players_of_result_count
+from haley_gg.apps.stats.utils import get_top_n_players
 from haley_gg.apps.stats.utils import get_results_group_by_player_name
-# from haley_gg.apps.stats.utils import get_streak
-# from haley_gg.apps.stats.utils import streak_to_string
+from haley_gg.apps.stats.utils import get_player_streak
 
 
 class Player(models.Model):
@@ -40,7 +37,7 @@ class Player(models.Model):
 
     joined_date = models.DateField(default=timezone.now)
 
-    career = models.TextField(default="")
+    career = models.TextField(default="아직 잠재력이 드러나지 않았습니다...")
 
     class Meta:
         ordering = ['name']
@@ -75,18 +72,30 @@ class Player(models.Model):
                     Result.melee.all()
                 )[self.name]
             ),
-            # 'streak':
+            'streak': get_player_streak(self.results),
         }
 
-    def get_career_and_badge(self):
+    def get_career_and_titles(self):
         import re
-        badges = re.findall(r'\[(.*?)\]', self.career)
-        converted_career = self.career.replace('[', '')
-        converted_career = converted_career.replace(']', '')
+        career_titles = re.findall(r'\[(.*?)\]', self.career)
+        stars = 0
+        badges = []
+        for title in career_titles:
+            html_element = ''
+            if '준우승' in title:
+                stars += 1
+                html_element = f'<div class="badge badge-info">{title}</div>'
+            elif '우승' in title:
+                html_element = f'<div class="badge badge-success">{title}</div>'
+            else:
+                html_element = f'<div class="badge badge-secondary">{title}</div>'
+            badges.append(html_element)
         return {
             'career': {
+                'stars': range(stars),
                 'badges': badges,
-                'converted_career': converted_career
+                'converted_career':
+                self.career.replace('[', '').replace(']', '')
             }
         }
 
@@ -128,25 +137,18 @@ class League(models.Model):
 
     def get_statistics(self):
         # it must be get melee results, but this code isn't!
-        league_results = self.results.all()
-        league_melee_results = self.results.filter(type="melee")
+        results = self.results.all()
+        melee_results = self.results.filter(type="melee")
         return {
             'grouped_league_results':
-            get_grouped_results_by_match_name(
-                league_results
+            get_grouped_results_dict_by_match_name(
+                results
             ),
             'race_relative_count':
             get_total_sum_of_RaceAndWinState_objects(
-                get_grouped_RaceAndWinState_objects(league_melee_results)
+                get_grouped_RaceAndWinState_objects(melee_results)
             ),
-            'top_5_players': {
-                'win_count':
-                get_top_5_players_of_win_count(league_melee_results),
-                'win_rate':
-                get_top_5_players_of_win_rate(league_melee_results),
-                'result_count':
-                get_top_5_players_of_result_count(league_melee_results),
-            }
+            'top_players': get_top_n_players(melee_results, 5)
         }
 
 
@@ -172,18 +174,12 @@ class Map(models.Model):
         melee_results = self.results.filter(type="melee")
 
         # Get top 5 players of statistic items.
-        top_5_players = {
-            'win_rate': get_top_5_players_of_win_rate(melee_results),
-            'win_count': get_top_5_players_of_win_count(melee_results),
-            'result_count': get_top_5_players_of_result_count(melee_results),
-            # 'melee_win_streak': get_streak(melee_results)
-        }
 
         return {
             'win_rate_by_race': get_total_sum_of_RaceAndWinState_objects(
                 get_grouped_RaceAndWinState_objects(melee_results)
             ),
-            'top_5_players': top_5_players,
+            'top_players': get_top_n_players(melee_results, 5)
         }
 
 

@@ -1,37 +1,44 @@
 {% extends 'base.html' %} 
-{% block title %}Player&nbsp;-&nbsp;{{ player.name }}{% endblock title %}
+{% block title %}플레이어&nbsp;-&nbsp;{{ player.name }}{% endblock title %}
 {% block content %}
 {% load static %}
 <div class="profile">
     <!--   Player   -->
-    <div class="jumbotron rounded-0 text-secondary text-center {{ player.most_race }}">
+    <div class="rounded-0 text-secondary bg-light p-3 {{ player.most_race }}">
         <div class="h1">
             {{ player.name }}
             <span class="h4 text-secondary">{{ player.most_race }}</span>
         </div>
         <small class="text-secondary">{{ player.joined_date }}에 가입</small>
+        <!--   Career   -->
         <div>
+            <div>
+                {% for i in career.stars %}*{% endfor %}
+            </div>
             {% for badge in career.badges %}
-                <div class="badge badge-primary">
-                    {{ badge }}
-                </div>
+                {{ badge|safe }}
             {% endfor %}
+        </div>
+        <hr>
+        
+        <div class="text-left">
+            {{ career.converted_career|linebreaks }}
         </div>
     </div>
 
-    <!--   Career   -->
-    <hr>
-    <div class="h2 m-3">커리어</div>
-    <div class="jumbotron rounded-0">
-        {{ career.converted_career|linebreaks }}
-    </div>
     <!--   Recent Results   -->
-    <hr>
     <div class="m-3">
         <div class="h2">
             최근 전적
             <span class="h4">
-                총 승률 : {{ win_rate|floatformat:1 }}%&nbsp;|&nbsp;{{ streak }}
+                총 승률 : {{ win_rate|floatformat:1 }}%&nbsp;|&nbsp;<br/>
+                {% for i in streak %}
+                    {{ i }}<br>
+                {% endfor %}
+                <hr>
+                {% for i in alldata %}
+                    {{ i.id }}, {{ i }}<br>
+                {% endfor %}
             </span>
         </div>
     </div>

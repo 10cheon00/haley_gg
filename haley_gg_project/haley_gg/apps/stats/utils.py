@@ -1,6 +1,8 @@
 from django.db.models import Avg
 from django.db.models import Count
 from django.db.models import Sum
+from django.db.models import Case
+from django.db.models import When
 from django.db.models import IntegerField
 from django.db.models.functions import Cast
 
@@ -29,7 +31,7 @@ def remove_space(text):
     return text.replace(' ', '')
 
 
-def get_grouped_results_by_match_name(results):
+def get_grouped_results_dict_by_match_name(results):
     """
     Groups result data by match name.
     """
@@ -42,7 +44,7 @@ def get_grouped_results_by_match_name(results):
     return grouped_results_dict
 
 
-def get_grouped_results_that_has_player(grouped_results_dict, player):
+def get_grouped_results_dict_what_have_player(grouped_results_dict, player):
     """
     Do filtering grouped result data.
     Deletes all result data from grouped result data without a given player.
@@ -92,32 +94,121 @@ def get_players_result_count(results):
     )
 
 
-def get_top_5_players_of_win_rate(results):
+def get_grouped_results_dict_by_player(results):
     """
-    Get top 5 players of win rate.
+    Get results group by player name, without using ORM.
+    """
+    results = results.select_related('player')
+    grouped_results_by_player = {}
+    for result in results:
+        if result.player.name not in grouped_results_by_player:
+            grouped_results_by_player[result.player.name] = []
+        grouped_results_by_player[result.player.name].append(result)
+    return grouped_results_by_player
+
+
+def get_player_streak(player_results):
+    """
+    Get player's streak with its results.
+    """
+    streak = 0
+    previous_win_state = player_results[0].is_win
+    for result in player_results:
+        if previous_win_state is not result.is_win:
+            # If win state changed, break.
+            break
+        if result.is_win:
+            streak += 1
+        else:
+            streak -= 1
+        previous_win_state = result.is_win
+    return streak
+
+
+def get_win_and_lose_streak(results):
+    """
+    Get streak in results each player.
+    """
+    grouped_results_by_player = get_grouped_results_dict_by_player(results)
+
+    win_streaks = []
+    lose_streaks = []
+    for player_name, player_results in grouped_results_by_player.items():
+        streak = get_player_streak(player_results)
+        if streak > 0:
+            win_streaks.append((player_name, streak))
+        else:
+            lose_streaks.append((player_name, -1 * streak))
+
+    return {
+        'win_streaks': sorted(win_streaks, key=lambda x: x[1], reverse=True),
+        'lose_streaks': sorted(lose_streaks, key=lambda x: x[1], reverse=True)
+    }
+
+
+def get_players_of_win_rate(results):
+    """
+    Get all player's win rate.
     """
     return get_win_rate(
         get_players_result_count(results)
-    ).order_by('-win_rate', '-result_count')[:5]
+    ).order_by(
+        '-win_rate', '-result_count'
+    ).values(
+        'player__name', 'win_rate', 'result_count'
+    )
 
 
-def get_top_5_players_of_result_count(results):
+def get_players_of_result_count(results):
     """
-    Get top 5 players of result count.
+    Get all player's result count.
     """
     return get_players_result_count(
         results
-    ).order_by('-result_count')[:5]
+    ).order_by('-result_count').values('player__name', 'result_count')
 
 
-def get_top_5_players_of_win_count(results):
+def get_win_and_lose_count(results):
+    """
+    Get win and lose count of results.
+    """
     return get_results_group_by_player_name(
         results
     ).annotate(
         win_count=Sum(
             Cast('is_win', output_field=IntegerField())
+        ),
+        lose_count=Sum(
+            Case(
+                When(
+                    is_win=False, then=1
+                ),
+                default=0, output_field=IntegerField()
+            )
         )
-    ).order_by('-win_count')[:5]
+    ).values('player__name', 'win_count', 'lose_count')
+
+
+def get_top_n_players(results, player_number):
+    """
+    Get top n players of each category.
+    """
+    win_and_lose_count = get_win_and_lose_count(results)
+    win_and_lose_streak = get_win_and_lose_streak(results)
+    return {
+        'win_count':
+        win_and_lose_count.order_by('-win_count')[:player_number],
+        'lose_count':
+        win_and_lose_count.order_by('-lose_count')[:player_number],
+        'win_rate':
+        get_players_of_win_rate(results)[:player_number],
+        'result_count':
+        get_players_of_result_count(results)[:player_number],
+        'win_streak':
+        win_and_lose_streak['win_streaks'][:player_number],
+        'lose_streak':
+        win_and_lose_streak['lose_streaks'][:player_number],
+    }
 
 
 def get_grouped_RaceAndWinState_objects(results):
@@ -216,21 +307,3 @@ def get_total_sum_of_RaceAndWinState_objects(grouped_RaceAndWinState_objects):
 
     return total_of_WinAndResultCountByRace_object
 
-
-"""
-ORM으로 힘들것 같아 당장은 미룸.
-"""
-# def get_streak(results):
-#     """
-#     Get streak in results.
-#     """
-#     return results.values('player__name', 'is_win').order_by().annotate(
-#         count=Count('is_win')
-#     )[1]  # Get last value of streaks.
-
-
-# def streak_to_string(streak):
-#     if streak['is_win']:
-#         return f'{streak["count"]}연승'
-#     else:
-#         return f'{streak["count"]}연패'

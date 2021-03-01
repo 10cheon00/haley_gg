@@ -1,67 +1,7 @@
-{% extends 'base.html' %}
+{% extends 'stats/leagues/league.html' %}
 {% block title %}스타리그{% endblock title %}
 {% block active_starleague %}active{% endblock active_starleague %}
 
-{% block content %}
-
+{% block page_name %}
 <div class="h3">스타리그 현황</div>
-<!--   League Selector   -->
-<ul class="nav nav-tabs">
-    {% for league in statistics.leagues %}
-        <li class="nav-item">
-            <a class="nav-link {% if forloop.counter == 1 %}active{% endif %}" 
-               data-toggle="tab"
-               href="#{{ league.slugify_str }}">
-                {{ league }}
-            </a>
-        </li>
-    {% endfor %}
-</ul>
-<br>
-<!--   League content   -->
-<div class="tab-content">
-    {% for league_data in statistics.league_list %}
-        <div class="tab-pane {% if forloop.counter == 1 %}show active{% endif %}" 
-             id="{{ league_data.league.slugify_str }}">
-            
-            <!--   League statistics   -->
-            <hr>
-            <div class="row d-flex text-center align-items-center">
-                <div class="col-md-3">
-                    {% for data in league_data.race_relative_count.values %}
-                        {{ data }}<br>
-                    {% endfor %}
-                </div>
-                <div class="col-md-3">
-                    승률 순위<br>
-                    {% for player in league_data.top_5_players.win_rate %}
-                        {{ player.player__name }} : {{ player.win_rate|floatformat:1 }} ( {{ player.result_count }} )<br>
-                    {% endfor %}
-                </div>
-                <div class="col-md-3">
-                    승수 순위<br>
-                    {% for player in league_data.top_5_players.win_count %}
-                        {{ player.player__name }} : {{ player.win_count }}승<br>
-                    {% endfor %}
-                </div>
-                <div class="col-md-3">
-                    다전 순위<br>
-                    {% for player in league_data.top_5_players.result_count %}
-                        {{ player.player__name }} : {{ player.result_count }}전<br>
-                    {% endfor %}
-                </div>
-            </div>
-            <!--   Results   -->
-            <hr>
-            <div class="h3">
-                전적
-            </div>
-            <hr>
-            {% with result_dict=league_data.grouped_league_results %}
-                {% include 'stats/results/list.html' %}
-            {% endwith %}
-        </div>
-    {% endfor %}
-</div>
-
-{% endblock content %}
+{% endblock page_name %}

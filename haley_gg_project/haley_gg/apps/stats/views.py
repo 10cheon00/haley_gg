@@ -17,8 +17,8 @@ from haley_gg.apps.stats.forms import get_pvp_data_formset
 from haley_gg.apps.stats.forms import ResultForm
 from haley_gg.apps.stats.forms import UpdatePlayerForm
 from haley_gg.apps.stats.utils import remove_space
-from haley_gg.apps.stats.utils import get_grouped_results_by_match_name
-from haley_gg.apps.stats.utils import get_grouped_results_that_has_player
+from haley_gg.apps.stats.utils import get_grouped_results_dict_by_match_name
+from haley_gg.apps.stats.utils import get_grouped_results_dict_what_have_player
 from haley_gg.apps.stats.mixins import LeagueStatisticMixin
 from haley_gg.apps.stats.mixins import PlayerSelectMixin
 
@@ -34,7 +34,7 @@ class ResultListView(ListView):
             'league',
             'player'
         )
-        context['result_dict'] = get_grouped_results_by_match_name(queryset)
+        context['result_dict'] = get_grouped_results_dict_by_match_name(queryset)
         return context
 
 
@@ -109,12 +109,12 @@ class PlayerDetailView(PlayerSelectMixin, DetailView):
             'league',
             'player'
         )
-        grouped_results_dict = get_grouped_results_that_has_player(
-            get_grouped_results_by_match_name(queryset), self.object.name
+        grouped_results_dict = get_grouped_results_dict_what_have_player(
+            get_grouped_results_dict_by_match_name(queryset), self.object.name
         )
         context['result_dict'] = grouped_results_dict
         context.update(self.object.get_statistics())
-        context.update(self.object.get_career_and_badge())
+        context.update(self.object.get_career_and_titles())
         return context
 
 
