@@ -1,9 +1,17 @@
 {% extends 'base.html' %}
+{% load static %}
+{% block header %}
+{{ block.super }}
+<link rel="stylesheet" type="text/css" href="/static/stats/leagues/style.css/" />
+{% endblock header %}
+
 {% block content %}
+
 {% block page_name %}{% endblock page_name %}
 
 <!--   League Selector   -->
-<ul class="nav nav-tabs">
+
+<ul class="nav nav-pills">
     {% for league in statistics.leagues %}
         <li class="nav-item">
             <a class="nav-link {% if forloop.counter == 1 %}active{% endif %}" 
@@ -19,8 +27,7 @@
 <div class="tab-content">
     {% for league_data in statistics.league_list %}
         <div class="tab-pane {% if forloop.counter == 1 %}show active{% endif %}" 
-             id="{{ league_data.league.slugify_str }}">
-            
+             id="{{ league_data.league_name }}">
             <!--   League statistics   -->
             <div class="d-flex justify-content-center">
                 {% for data in league_data.race_relative_count.values %}
@@ -34,10 +41,10 @@
             <!--   Results   -->
             <hr>
             <div class="h3">
-                전적
+                경기 결과
             </div>
             <hr>
-            {% with result_dict=league_data.grouped_league_results %}
+            {% with results_groups=league_data.grouped_league_results %}
                 {% include 'stats/results/list.html' %}
             {% endwith %}
         </div>

@@ -1,29 +1,29 @@
 <!--   Rendering with grouped grouped_results.   -->
 <div class="list-group text-center">
-    {% for key, grouped_results in result_dict.items %}
+    {% for results_group in results_groups %}
         <div class="list-group-item">
             <div class="row d-flex justify-content-between align-items-center">
                 <div class="col-md-2">
                     <small class="text-secondary">
-                        {{ grouped_results.get_results.0.date }}
+                        {{ results_group.get_results.0.date }}
                     </small>
                 </div>
                 <div class="col-md-2">
-                    {{ grouped_results.get_results.0.league }}
+                    {{ results_group.get_first_result.league }}
                     <br>
-                    {{ grouped_results.get_results.0.title }}&nbsp;
-                    {{ grouped_results.get_results.0.round }}
-                    {% if grouped_results.get_results.0.remark != '' %}
-                        {{ grouped_results.get_results.0.remark }}
+                    {{ results_group.get_first_result.title }}&nbsp;
+                    {{ results_group.get_first_result.round }}
+                    {% if results_group.get_first_result.remark != '' %}
+                        {{ results_group.get_first_result.remark }}
                     {% endif %}
                 </div>
                 <div class="col-md-2">
-                    <a href="{{ grouped_results.get_results.0.map.get_absolute_url }}">
-                        {{ grouped_results.get_results.0.map }}
+                    <a href="{{ results_group.get_first_result.map.get_absolute_url }}">
+                        {{ results_group.get_first_result.map }}
                     </a>
                 </div>
                 <div class="col-md-6">
-                    {% for result in grouped_results.get_results %}
+                    {% for result in results_group.get_results %}
                         <a href="{{ result.player.get_absolute_url}}"
                            class="
                             {% if result.player.name == player.name %}

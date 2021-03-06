@@ -1,0 +1,49 @@
+{% extends 'base.html' %}
+
+{% block title %}
+{% if compare %}
+    {{ compare.player }} vs {{ compare.opponent }}
+{% else %}
+    상대전적
+{% endif %}
+{% endblock title %}
+
+{% block active_compare %}active{% endblock active_compare %}
+
+{% block content %}
+<!--   compare user form   -->
+<form method="GET">
+    <div class="form-group row">
+        <div class="col">
+            <div class="form-group row">
+                <label class="col-2 col-form-label">
+                    {{ compare_user_form.player.label }}
+                </label>
+                <div class="col">
+                     {{ compare_user_form.player }}
+                </div>
+            </div>
+            <div class="row">
+                <label class="col-2 col-form-label">
+                    {{ compare_user_form.opponent.label }}
+                </label>
+                <div class="col">
+                     {{ compare_user_form.opponent }}
+                </div>
+            </div>
+        </div>
+        <div class="form-group col d-flex align-items-center">
+            <button class="form-control btn btn-primary" type="submit">
+                Search
+            </button>
+        </div>
+    </div>
+</form>
+<hr>
+<!--   compare data   -->
+{{ compare.data.statistics }}
+<!--   Results   -->
+{% with results_groups=compare.data.results %}
+    {% include 'stats/results/list.html' %}
+{% endwith %}
+{% endblock %}

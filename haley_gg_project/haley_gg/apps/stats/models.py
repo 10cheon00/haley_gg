@@ -1,4 +1,8 @@
 from django.db import models
+from django.db.models import Q
+from django.db.models import Sum
+from django.db.models import Avg
+from django.db.models.functions import Cast
 from django.utils import timezone
 from django.shortcuts import reverse
 
@@ -7,7 +11,7 @@ from haley_gg.apps.stats.utils import slugify
 from haley_gg.apps.stats.utils import remove_space
 # from haley_gg.apps.stats.utils import calculate_percentage
 from haley_gg.apps.stats.utils import get_win_rate
-from haley_gg.apps.stats.utils import get_grouped_results_dict_by_match_name
+from haley_gg.apps.stats.utils import ResultsGroupManager
 from haley_gg.apps.stats.utils import get_grouped_RaceAndWinState_objects
 from haley_gg.apps.stats.utils import get_sum_of_RaceAndWinState_objects
 from haley_gg.apps.stats.utils import get_total_sum_of_RaceAndWinState_objects
@@ -72,7 +76,7 @@ class Player(models.Model):
                     Result.melee.all()
                 )[self.name]
             ),
-            'streak': get_player_streak(self.results),
+            'streak': get_player_streak(self.results.all()),
         }
 
     def get_career_and_titles(self):
@@ -81,15 +85,18 @@ class Player(models.Model):
         stars = 0
         badges = []
         for title in career_titles:
-            html_element = ''
+            color = ''
             if '준우승' in title:
                 stars += 1
-                html_element = f'<div class="badge badge-info">{title}</div>'
+                color = 'info'
             elif '우승' in title:
-                html_element = f'<div class="badge badge-success">{title}</div>'
+                color = 'success'
             else:
-                html_element = f'<div class="badge badge-secondary">{title}</div>'
-            badges.append(html_element)
+                color = 'secondary'
+
+            badges.append(
+                f'<div class="badge badge-{color}">{title}</div>'
+            )
         return {
             'career': {
                 'stars': range(stars),
@@ -98,6 +105,30 @@ class Player(models.Model):
                 self.career.replace('[', '').replace(']', '')
             }
         }
+
+    def versus(self, opponent):
+        """
+        1. 연관된 전적 조회
+        2. 승, 패 조회
+        3. 그 외 Elo, 랭킹들 조회
+        """
+        results = Result.objects.filter(
+            Q(type='melee') &
+            (Q(player_a=self.id) & Q(player_b=opponent.id)) |
+            (Q(player_a=opponent.id) & Q(player_b=self.id))
+        ).select_related('league', 'map', 'player')
+        context = {
+            'results': ResultsGroupManager(results),
+            'statistics': results.filter(player=self.id).aggregate(
+                win_count=Sum(
+                    Cast('is_win', output_field=models.IntegerField())
+                ),
+                win_rate=Avg(
+                    Cast('is_win', output_field=models.IntegerField()) * 100
+                )
+            ),
+        }
+        return context
 
 
 class League(models.Model):
@@ -140,10 +171,9 @@ class League(models.Model):
         results = self.results.all()
         melee_results = self.results.filter(type="melee")
         return {
+            'league_name': self.slugify_str(),
             'grouped_league_results':
-            get_grouped_results_dict_by_match_name(
-                results
-            ),
+            ResultsGroupManager(results),
             'race_relative_count':
             get_total_sum_of_RaceAndWinState_objects(
                 get_grouped_RaceAndWinState_objects(melee_results)

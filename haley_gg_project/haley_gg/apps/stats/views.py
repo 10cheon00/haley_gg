@@ -15,10 +15,10 @@ from haley_gg.apps.stats.models import Map
 from haley_gg.apps.stats.models import Player
 from haley_gg.apps.stats.forms import get_pvp_data_formset
 from haley_gg.apps.stats.forms import ResultForm
+from haley_gg.apps.stats.forms import CompareUserForm
 from haley_gg.apps.stats.forms import UpdatePlayerForm
 from haley_gg.apps.stats.utils import remove_space
-from haley_gg.apps.stats.utils import get_grouped_results_dict_by_match_name
-from haley_gg.apps.stats.utils import get_grouped_results_dict_what_have_player
+from haley_gg.apps.stats.utils import ResultsGroupManager
 from haley_gg.apps.stats.mixins import LeagueStatisticMixin
 from haley_gg.apps.stats.mixins import PlayerSelectMixin
 
@@ -34,7 +34,7 @@ class ResultListView(ListView):
             'league',
             'player'
         )
-        context['result_dict'] = get_grouped_results_dict_by_match_name(queryset)
+        context['result_dict'] = ResultsGroupManager(queryset)
         return context
 
 
@@ -92,6 +92,11 @@ class StarleagueView(LeagueStatisticMixin, TemplateView):
 class PlayerDetailView(PlayerSelectMixin, DetailView):
     model = Player
     template_name = 'stats/players/detail.html'
+    queryset = Result.objects.select_related(
+        'map',
+        'league',
+        'player'
+    )
 
     """
     get_context_data sequence.
@@ -104,15 +109,9 @@ class PlayerDetailView(PlayerSelectMixin, DetailView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        queryset = Result.objects.select_related(
-            'map',
-            'league',
-            'player'
-        )
-        grouped_results_dict = get_grouped_results_dict_what_have_player(
-            get_grouped_results_dict_by_match_name(queryset), self.object.name
-        )
-        context['result_dict'] = grouped_results_dict
+        manager = ResultsGroupManager(self.queryset)
+        context['results_groups'] = \
+            manager.get_results_groups_which_having_player(self.object.name)
         context.update(self.object.get_statistics())
         context.update(self.object.get_career_and_titles())
         return context
@@ -122,13 +121,6 @@ class PlayerUpdateView(PlayerSelectMixin, UpdateView):
     model = Player
     template_name = 'stats/players/update.html'
     form_class = UpdatePlayerForm
-    """
-    339 커리어 데이터
-    [★1]HPL 시즌1 "불독이 멍멍"팀 우승(개인 5승3패/팀플 6승0패)
-    HPL 시즌3 "Run"팀장
-    HPL 시즌1 팀플다승3위(6승0패)
-    HPL 시즌1 통합다승3위(10승3패)
-    """
 
 
 class MapListView(ListView):
@@ -159,3 +151,29 @@ class MapDetailView(DetailView):
         context = super().get_context_data(**kwargs)
         context.update(self.object.get_statistics())
         return context
+
+
+class CompareUserView(View):
+    template_name = 'stats/compare/compare.html'
+    form_class = CompareUserForm
+
+    def get(self, request):
+        form = CompareUserForm(request.GET or None)
+        context = {
+            'compare_user_form': form
+        }
+        if form.is_valid():
+            # get data from form.
+            # process comparing.
+            player = Player.objects.get(
+                name=form.cleaned_data.get('player')
+            )
+            opponent = Player.objects.get(
+                name=form.cleaned_data.get('opponent')
+            )
+            context['compare'] = {
+                'player': player,
+                'opponent': opponent,
+                'data': player.versus(opponent),
+            }
+        return render(request, self.template_name, context)

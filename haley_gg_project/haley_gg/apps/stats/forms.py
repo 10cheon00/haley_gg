@@ -334,6 +334,41 @@ class PVPDataFormSet(forms.BaseFormSet):
                     saved_result_list.append(result.round)
 
 
+class CompareUserForm(forms.Form):
+    player = forms.ModelChoiceField(
+        label="플레이어",
+        queryset=Player.objects.all(),
+        widget=forms.Select(
+            attrs={
+                'class': 'form-control',
+            }
+        ),
+    )
+
+    opponent = forms.ModelChoiceField(
+        label="상대",
+        queryset=Player.objects.all(),
+        widget=forms.Select(
+            attrs={
+                'class': 'form-control',
+            }
+        ),
+    )
+
+    def clean(self):
+        # Check that player is same as opponent.
+
+        cleaned_data = super().clean()
+        if not self.errors:
+            player = cleaned_data.get('player')
+            opponent = cleaned_data.get('opponent')
+            if player.name == opponent.name:
+                error_msg = '선택한 플레이어 이름이 같습니다.'
+                self.add_error('player', error_msg)
+                self.add_error('opponent', error_msg)
+        return cleaned_data
+
+
 def get_pvp_data_formset():
     return formset_factory(
         form=PVPDataForm,

@@ -7,9 +7,18 @@ a:hover {
     color: grey;
 }
 body {
-    background-color:#dddddd;
+    background-color:#DDDDDD;
 }
 
 body > .container {
-    background-color:#ffffff;
+    background-color:#FFFFFF;
+}
+
+.navbar {
+    background-color:#FDA988;
+}
+
+.navbar-nav .active > .nav-link {
+    color: #FFFFFF;
+    border-bottom: 4px solid #FFFFFF;
 }

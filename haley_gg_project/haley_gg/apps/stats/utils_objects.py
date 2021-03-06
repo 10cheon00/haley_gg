@@ -1,23 +1,4 @@
 
-class GroupedResults:
-    """
-    Groups result data to distinguish matches.
-    This model used in template to show results by match.
-    """
-
-    def __init__(self):
-        self.results = []
-
-    def add_result(self, result):
-        self.results.append(result)
-
-    def get_results(self):
-        return self.results
-
-    def has_player(self, player):
-        return player in [result.player.name for result in self.get_results()]
-
-
 class RaceAndWinState:
     """
     Used in showing statistics for calculating win rate from result data.
@@ -27,7 +8,7 @@ class RaceAndWinState:
     def __init__(self, player_race, opponent_race, win_state):
         self.__player_race = player_race
         self.__opponent_race = opponent_race
-        self.win_state = win_state
+        self.__win_state = win_state
 
     @property
     def player_race(self):
@@ -39,7 +20,7 @@ class RaceAndWinState:
 
     @property
     def is_win(self):
-        return self.win_state
+        return self.__win_state
 
 
 class WinAndResultCountByRace(dict):

@@ -7,14 +7,15 @@
     <div class="rounded-0 text-secondary bg-light p-3 {{ player.most_race }}">
         <div class="h1">
             {{ player.name }}
-            <span class="h4 text-secondary">{{ player.most_race }}</span>
+            <span class="h4">{{ player.most_race }}</span>
+            <span class="h3">
+                &#65372;
+                {% for i in career.stars %}&#9733;{% endfor %}
+            </span>
         </div>
         <small class="text-secondary">{{ player.joined_date }}에 가입</small>
         <!--   Career   -->
         <div>
-            <div>
-                {% for i in career.stars %}*{% endfor %}
-            </div>
             {% for badge in career.badges %}
                 {{ badge|safe }}
             {% endfor %}
@@ -31,14 +32,7 @@
         <div class="h2">
             최근 전적
             <span class="h4">
-                총 승률 : {{ win_rate|floatformat:1 }}%&nbsp;|&nbsp;<br/>
-                {% for i in streak %}
-                    {{ i }}<br>
-                {% endfor %}
-                <hr>
-                {% for i in alldata %}
-                    {{ i.id }}, {{ i }}<br>
-                {% endfor %}
+                총 승률 : {{ win_rate|floatformat:1 }}%&nbsp;|&nbsp;{{ streak }}
             </span>
         </div>
     </div>

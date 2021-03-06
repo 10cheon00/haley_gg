@@ -6,7 +6,6 @@ from django.db.models import When
 from django.db.models import IntegerField
 from django.db.models.functions import Cast
 
-from haley_gg.apps.stats.utils_objects import GroupedResults
 from haley_gg.apps.stats.utils_objects import RaceAndWinState
 from haley_gg.apps.stats.utils_objects import WinAndResultCountByRace
 
@@ -25,35 +24,7 @@ def slugify(text):
 
 
 def remove_space(text):
-    """
-    Remove space character in text what given.
-    """
     return text.replace(' ', '')
-
-
-def get_grouped_results_dict_by_match_name(results):
-    """
-    Groups result data by match name.
-    """
-    grouped_results_dict = {}
-    for result in results:
-        name = result.match_name()
-        if name not in grouped_results_dict:
-            grouped_results_dict[name] = GroupedResults()
-        grouped_results_dict[name].add_result(result)
-    return grouped_results_dict
-
-
-def get_grouped_results_dict_what_have_player(grouped_results_dict, player):
-    """
-    Do filtering grouped result data.
-    Deletes all result data from grouped result data without a given player.
-    """
-    for key in list(grouped_results_dict.keys()):
-        # If grouped_result_list not contain this player, remove it.
-        if not grouped_results_dict[key].has_player(player):
-            del grouped_results_dict[key]
-    return grouped_results_dict
 
 
 def calculate_percentage(numerator, denominator):
@@ -68,13 +39,80 @@ def calculate_percentage(numerator, denominator):
 
 def get_win_rate(results):
     """
-    Get rate from result model with is_win field.
+    Get rate from result queryset with is_win field.
     """
     return results.annotate(
         win_rate=Avg(
             Cast('is_win', output_field=IntegerField()) * 100
         )
     )
+
+
+class ResultsGroup(list):
+    """
+    Groups result data to distinguish matches.
+    This model used in template to show results by match.
+    """
+
+    def __init__(self, name):
+        self.__match_name = name
+
+    def add_result(self, result):
+        self.append(result)
+
+    def get_results(self):
+        return self
+
+    def has_player(self, player):
+        return player in [result.player.name for result in self.get_results()]
+
+    def get_first_result(self):
+        return self[0]
+
+    @property
+    def match_name(self):
+        return self.__match_name
+
+
+class ResultsGroupManager(list):
+
+    def __init__(self, result_queryset):
+        """
+        convert result queryset to results group.
+        """
+        for result in result_queryset:
+            match_name = result.match_name()
+            results_group = self.find_results_group(match_name)
+            if results_group is None:
+                results_group = self.add_results_group(ResultsGroup(match_name))
+            results_group.add_result(result)
+
+    def add_results_group(self, results_group):
+        self.append(results_group)
+        return results_group
+
+    def get_results_groups(self):
+        return self
+
+    def find_results_group(self, match_name):
+        for results_group in self:
+            if results_group.match_name == match_name:
+                return results_group
+        return None
+
+    def get_results_groups_which_having_player(self, player):
+        results_group_copy = self[:]
+        for results_group in results_group_copy:
+            if not results_group.has_player(player):
+                results_group_copy.remove(results_group)
+        return results_group_copy
+
+
+"""
+TODO
+1. 아래에 있는 함수들 전부 모듈화하기.
+2. 쓸데없는 주석 지우기.
+"""
 
 
 def get_results_group_by_player_name(results):

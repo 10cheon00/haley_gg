@@ -25,7 +25,7 @@
     </head>
 
     <body>
-        <nav class="navbar navbar-expand-lg bg-light">
+        <nav class="navbar navbar-expand-lg">
             <div class="container">
                 <a class="navbar-brand" href="{% url 'main_page' %}">Haley.gg</a>
                 <button
@@ -40,20 +40,28 @@
                     <span class="navbar-toggler-icon"></span>
                 </button>
                 <div class="collapse navbar-collapse" id="navbarNavAltMarkup">
-                    <div class="nav">
-                        <!-- <a class="nav-link nav-item 
-                                  {% block active_result %}{% endblock active_result %}" 
-                           href="{% url 'stats:result_list' %}">전적보기</a> -->
-                        <a class="nav-link nav-item 
-                                  {% block active_proleague %}{% endblock active_proleague %}" 
-                           href="{% url 'stats:proleague' %}">프로리그</a>
-                        <a class="nav-link nav-item 
-                                  {% block active_starleague %}{% endblock active_starleague %}" 
-                           href="{% url 'stats:starleague' %}">스타리그</a>
-                        <a class="nav-link nav-item 
-                                  {% block active_map %}{% endblock active_map %}" 
-                           href="{% url 'stats:map_list' %}">맵</a>
-                    </div>
+                    <ul class="navbar-nav">
+                        <li class="nav-item
+                                   {% block active_proleague %}{% endblock active_proleague %}">
+                            <a class="nav-link"                                      
+                               href="{% url 'stats:proleague' %}">프로리그</a>
+                        </li>
+                        <li class="nav-item
+                                   {% block active_starleague %}{% endblock active_starleague %}">
+                            <a class="nav-link" 
+                               href="{% url 'stats:starleague' %}">스타리그</a>
+                        </li>
+                        <li class="nav-item
+                                   {% block active_map %}{% endblock active_map %}">
+                            <a class="nav-link"
+                               href="{% url 'stats:map_list' %}">맵</a>
+                        </li>
+                        <li class="nav-item
+                                   {% block active_compare %}{% endblock active_compare %}">
+                            <a class="nav-link"
+                               href="{% url 'stats:compare' %}">상대전적</a>
+                        </li>
+                    </ul>
                 </div>
             </div>
         </nav>
