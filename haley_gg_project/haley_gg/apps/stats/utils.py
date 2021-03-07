@@ -6,9 +6,6 @@ from django.db.models import When
 from django.db.models import IntegerField
 from django.db.models.functions import Cast
 
-from haley_gg.apps.stats.utils_objects import RaceAndWinState
-from haley_gg.apps.stats.utils_objects import WinAndResultCountByRace
-
 
 def slugify(text):
     """
@@ -108,28 +105,83 @@ class ResultsGroupManager(list):
         return results_group_copy
 
 
-"""
-TODO
-1. 아래에 있는 함수들 전부 모듈화하기.
-2. 쓸데없는 주석 지우기.
-"""
+class WinAndResultCountByRace(dict):
+    player_race = ''
+    opponent_race = ''
 
+    def __init__(self):
+        super().__init__()
+        self.update({
+            'T': {  # Winner's race
+                'T':  # Loser's race
+                [0,  # win_count
+                 0],  # Result_count
+                'Z': [0, 0], 'P': [0, 0]},
+            'Z': {'T': [0, 0], 'Z': [0, 0], 'P': [0, 0]},
+            'P': {'T': [0, 0], 'Z': [0, 0], 'P': [0, 0]}
+        })
 
-def get_results_group_by_player_name(results):
-    """
-    Get results what grouped by player name.
-    """
-    return results.values('player__name').order_by('player__name')
+    def __iadd__(self, other):
+        for player, oppoent_race_dict in self.items():
+            for opponent in oppoent_race_dict.keys():
+                self_data_list = self[player][opponent]
+                other_data_list = other[player][opponent]
+                self[player][opponent] = [
+                    x + y for x, y in zip(self_data_list, other_data_list)
+                ]
+        return self
 
+    def save_all_result(self, result_queryset):
+        result_queryset = result_queryset.values(
+            'race',
+            'player_a_race',
+            'player_b_race',
+            'is_win'
+        )
+        for result in result_queryset:
+            self.save_one_result(result)
 
-def get_players_result_count(results):
-    """
-    Get player's result count that grouped by its name.
-    """
-    return get_results_group_by_player_name(results).annotate(
-        # Add criteria for same rate player.
-        result_count=Count('id')
-    )
+    def save_all_result_only_related_with_player(
+        self,
+        result_queryset,
+        player_name
+    ):
+        result_queryset = result_queryset.values(
+            'player_a__name',
+            'player_b__name',
+            'race',
+            'player_a_race',
+            'player_b_race',
+            'is_win'
+        )
+        for result in result_queryset:
+            if self.is_result_related_with_player(result, player_name):
+                self.save_one_result(result)
+
+    def save_one_result(self, result):
+        self.get_players_races(result)
+        if result['is_win']:
+            self.add_one_win_result()
+        self.add_one_result()
+
+    def get_players_races(self, result):
+        if result['race'] is result['player_a_race']:
+            self.player_race = result['player_a_race']
+            self.opponent_race = result['player_b_race']
+        else:
+            self.player_race = result['player_b_race']
+            self.opponent_race = result['player_a_race']
+
+    def add_one_win_result(self):
+        self[self.player_race][self.opponent_race][0] += 1
+
+    def add_one_result(self):
+        self[self.player_race][self.opponent_race][1] += 1
+
+    def is_result_related_with_player(self, result, player_name):
+        return player_name in [
+            result['player_a__name'], result['player_b__name']
+        ]
 
 
 def get_grouped_results_dict_by_player(results):
@@ -182,6 +234,23 @@ def get_win_and_lose_streak(results):
         'win_streaks': sorted(win_streaks, key=lambda x: x[1], reverse=True),
         'lose_streaks': sorted(lose_streaks, key=lambda x: x[1], reverse=True)
     }
+
+
+def get_results_group_by_player_name(results):
+    """
+    Get results what grouped by player name.
+    """
+    return results.values('player__name').order_by('player__name')
+
+
+def get_players_result_count(results):
+    """
+    Get player's result count that grouped by its name.
+    """
+    return get_results_group_by_player_name(results).annotate(
+        # Add criteria for same rate player.
+        result_count=Count('id')
+    )
 
 
 def get_players_of_win_rate(results):
@@ -247,101 +316,4 @@ def get_top_n_players(results, player_number):
         'lose_streak':
         win_and_lose_streak['lose_streaks'][:player_number],
     }
-
-
-def get_grouped_RaceAndWinState_objects(results):
-    """
-    results을 RaceAndWinState형태로 전환한다.
-    전환한 RaceAndWinState를 player name을 따라 분류한다.
-    결과값으로 player name에 따라,
-    RaceAndWinState형태로 전환된 result들을 분류한 dictionary를 반환한다.
-    """
-    total_grouped_RaceAndWinState_objects = {}
-    results_values = results.values(
-        'player__name',
-        'player_a_race',
-        'player_b_race',
-        'is_win'
-    )
-
-    for result in results_values:
-        player_name = result['player__name']
-        if player_name not in total_grouped_RaceAndWinState_objects:
-            total_grouped_RaceAndWinState_objects[player_name] = []
-
-        total_grouped_RaceAndWinState_objects[player_name].append(
-            convert_result_to_RaceAndWinState(result)
-        )
-
-    return total_grouped_RaceAndWinState_objects
-
-
-def convert_result_to_RaceAndWinState(result):
-    """
-    convert result to RaceAndWinState object.
-
-    RaceAndWinState
-    |-- player_race
-    |-- opponent_race
-    `-- win_state
-    """
-    player_a_race = result['player_a_race']
-    player_b_race = result['player_b_race']
-    if not result['is_win']:
-        player_a_race, player_b_race = player_b_race, player_a_race
-
-    return RaceAndWinState(
-        player_a_race,
-        player_b_race,
-        result['is_win']
-    )
-
-
-def convert_RaceAndWinStates_to_WinAndResultCountByRace_object(
-    RaceAndWinState_object
-):
-    """
-    Convert RaceAndWinState to WinAndResultCountByRace object.
-    This function returns number of wins, results by relative race.
-    """
-
-    WinAndResultCountByRace_object = WinAndResultCountByRace()
-    player_race = RaceAndWinState_object.player_race
-    opponent_race = RaceAndWinState_object.opponent_race
-
-    if RaceAndWinState_object.is_win:
-        WinAndResultCountByRace_object[player_race][opponent_race][0] += 1
-    WinAndResultCountByRace_object[player_race][opponent_race][1] += 1
-    return WinAndResultCountByRace_object
-
-
-def get_sum_of_RaceAndWinState_objects(grouped_RaceAndWinState_objects):
-    """
-    Add all WinAndResultCountByRace objects in grouped RaceAndWinState_objects.
-    """
-    sum_of_WinAndResultCountByRace_object = WinAndResultCountByRace()
-    for RaceAndWinState_object in grouped_RaceAndWinState_objects:
-        converted_data = \
-            convert_RaceAndWinStates_to_WinAndResultCountByRace_object(
-                RaceAndWinState_object
-            )
-        sum_of_WinAndResultCountByRace_object += converted_data
-    return sum_of_WinAndResultCountByRace_object
-
-
-def get_total_sum_of_RaceAndWinState_objects(grouped_RaceAndWinState_objects):
-    """
-    Calculate number of win, result counts in all results by relative race.
-    Firstly, groups results by player name.
-    Secondly, add all RaceAndWinState in grouped results.
-    Lastly, returns added data in WinAndResultCountByRace type.
-    """
-    total_of_WinAndResultCountByRace_object = WinAndResultCountByRace()
-
-    for grouped_RaceAndWinState_object in grouped_RaceAndWinState_objects.values():
-        total_of_WinAndResultCountByRace_object += get_sum_of_RaceAndWinState_objects(
-            grouped_RaceAndWinState_object
-        )
-
-    return total_of_WinAndResultCountByRace_object
 

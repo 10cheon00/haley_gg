@@ -1,28 +1,28 @@
 <!--   Rendering with grouped grouped_results.   -->
-<div class="list-group text-center">
+<ul class="list-group text-center">
     {% for results_group in results_groups %}
-        <div class="list-group-item">
+        <li class="list-group-item">
             <div class="row d-flex justify-content-between align-items-center">
                 <div class="col-md-2">
                     <small class="text-secondary">
                         {{ results_group.get_results.0.date }}
                     </small>
                 </div>
+                <hr>
                 <div class="col-md-2">
                     {{ results_group.get_first_result.league }}
                     <br>
                     {{ results_group.get_first_result.title }}&nbsp;
                     {{ results_group.get_first_result.round }}
-                    {% if results_group.get_first_result.remark != '' %}
-                        {{ results_group.get_first_result.remark }}
-                    {% endif %}
                 </div>
+                <hr>
                 <div class="col-md-2">
                     <a href="{{ results_group.get_first_result.map.get_absolute_url }}">
                         {{ results_group.get_first_result.map }}
                     </a>
                 </div>
-                <div class="col-md-6">
+                <hr>
+                <div class="col-md-4">
                     {% for result in results_group.get_results %}
                         <a href="{{ result.player.get_absolute_url}}"
                            class="
@@ -36,7 +36,10 @@
                         <br>
                     {% endfor %}
                 </div>
+                <div class="col-md-2">
+                    {{ results_group.get_first_result.remark }}
+                </div>
             </div>
-        </div>
+        </li>
     {% endfor %}
-</div>
+</ul>

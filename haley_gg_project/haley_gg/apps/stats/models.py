@@ -12,9 +12,7 @@ from haley_gg.apps.stats.utils import remove_space
 # from haley_gg.apps.stats.utils import calculate_percentage
 from haley_gg.apps.stats.utils import get_win_rate
 from haley_gg.apps.stats.utils import ResultsGroupManager
-from haley_gg.apps.stats.utils import get_grouped_RaceAndWinState_objects
-from haley_gg.apps.stats.utils import get_sum_of_RaceAndWinState_objects
-from haley_gg.apps.stats.utils import get_total_sum_of_RaceAndWinState_objects
+from haley_gg.apps.stats.utils import WinAndResultCountByRace
 from haley_gg.apps.stats.utils import get_top_n_players
 from haley_gg.apps.stats.utils import get_results_group_by_player_name
 from haley_gg.apps.stats.utils import get_player_streak
@@ -66,16 +64,16 @@ class Player(models.Model):
         # If no results from player, below sequences are skipped.
         if not self.results.exists():
             return {}
-
+        win_and_result_count_by_race = WinAndResultCountByRace()
+        win_and_result_count_by_race.save_all_result_only_related_with_player(
+            Result.melee.all(),
+            self.name
+        )
         return {
             'win_rate': get_win_rate(
                 get_results_group_by_player_name(self.results)
             ).first()['win_rate'],
-            'win_rate_by_race_dict': get_sum_of_RaceAndWinState_objects(
-                get_grouped_RaceAndWinState_objects(
-                    Result.melee.all()
-                )[self.name]
-            ),
+            'win_rate_by_race_dict': win_and_result_count_by_race,
             'streak': get_player_streak(self.results.all()),
         }
 
@@ -170,14 +168,12 @@ class League(models.Model):
         # it must be get melee results, but this code isn't!
         results = self.results.all()
         melee_results = self.results.filter(type="melee")
+        win_and_result_count_by_race = WinAndResultCountByRace()
+        win_and_result_count_by_race.save_all_result(melee_results)
         return {
             'league_name': self.slugify_str(),
-            'grouped_league_results':
-            ResultsGroupManager(results),
-            'race_relative_count':
-            get_total_sum_of_RaceAndWinState_objects(
-                get_grouped_RaceAndWinState_objects(melee_results)
-            ),
+            'grouped_league_results': ResultsGroupManager(results),
+            'race_relative_count': win_and_result_count_by_race,
             'top_players': get_top_n_players(melee_results, 5)
         }
 
@@ -204,11 +200,10 @@ class Map(models.Model):
         melee_results = self.results.filter(type="melee")
 
         # Get top 5 players of statistic items.
-
+        win_and_result_count_by_race = WinAndResultCountByRace()
+        win_and_result_count_by_race.save_all_result(melee_results)
         return {
-            'win_rate_by_race': get_total_sum_of_RaceAndWinState_objects(
-                get_grouped_RaceAndWinState_objects(melee_results)
-            ),
+            'win_rate_by_race': win_and_result_count_by_race,
             'top_players': get_top_n_players(melee_results, 5)
         }
 
