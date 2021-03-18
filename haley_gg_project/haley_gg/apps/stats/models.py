@@ -13,9 +13,9 @@ from haley_gg.apps.stats.utils import remove_space
 from haley_gg.apps.stats.utils import get_win_rate
 from haley_gg.apps.stats.utils import ResultsGroupManager
 from haley_gg.apps.stats.utils import WinAndResultCountByRace
-from haley_gg.apps.stats.utils import get_top_n_players
 from haley_gg.apps.stats.utils import get_results_group_by_player_name
 from haley_gg.apps.stats.utils import get_player_streak
+from haley_gg.apps.stats.utils import MeleeRankManager
 
 
 class Player(models.Model):
@@ -170,11 +170,12 @@ class League(models.Model):
         melee_results = self.results.filter(type="melee")
         win_and_result_count_by_race = WinAndResultCountByRace()
         win_and_result_count_by_race.save_all_result(melee_results)
+        rank_manager = MeleeRankManager(melee_results)
         return {
             'league_name': self.slugify_str(),
             'grouped_league_results': ResultsGroupManager(results),
             'race_relative_count': win_and_result_count_by_race,
-            'top_players': get_top_n_players(melee_results, 5)
+            'top_players': rank_manager.get_top_players()
         }
 
 
@@ -202,9 +203,10 @@ class Map(models.Model):
         # Get top 5 players of statistic items.
         win_and_result_count_by_race = WinAndResultCountByRace()
         win_and_result_count_by_race.save_all_result(melee_results)
+        rank_manager = MeleeRankManager(melee_results)
         return {
             'win_rate_by_race': win_and_result_count_by_race,
-            'top_players': get_top_n_players(melee_results, 5)
+            'top_players': rank_manager.get_top_players()
         }
 
 

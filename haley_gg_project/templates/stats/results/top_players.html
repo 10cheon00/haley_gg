@@ -1,4 +1,8 @@
-<div class="row d-flex text-center">
+{% for player in top_players %}
+    {{ player}}<br>
+{% endfor %}
+
+<!-- <div class="row d-flex text-center">
     <div class="col-md">
         다전 순위
         <hr>
@@ -41,4 +45,4 @@
             {{ data.0 }} : {{ data.1 }}연패 <br/>
         {% endfor %}
     </div>
-</div>
+</div> -->

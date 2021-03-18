@@ -362,7 +362,7 @@ class CompareUserForm(forms.Form):
         if not self.errors:
             player = cleaned_data.get('player')
             opponent = cleaned_data.get('opponent')
-            if player.name == opponent.name:
+            if player.id is opponent.id:
                 error_msg = '선택한 플레이어 이름이 같습니다.'
                 self.add_error('player', error_msg)
                 self.add_error('opponent', error_msg)

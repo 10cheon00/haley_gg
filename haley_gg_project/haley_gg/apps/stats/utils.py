@@ -1,3 +1,5 @@
+from abc import ABCMeta
+
 from django.db.models import Avg
 from django.db.models import Count
 from django.db.models import Sum
@@ -45,6 +47,13 @@ def get_win_rate(results):
     )
 
 
+def get_results_group_by_player_name(results):
+    """
+    Get results what grouped by player name.
+    """
+    return results.values('player__name').order_by('player__name')
+
+
 class ResultsGroup(list):
     """
     Groups result data to distinguish matches.
@@ -72,6 +81,10 @@ class ResultsGroup(list):
 
 
 class ResultsGroupManager(list):
+    """
+    This manager groups results into ResultGroup by match name.
+    In template, result must shown by matches, so grouping results is needed.
+    """
 
     def __init__(self, result_queryset):
         """
@@ -79,19 +92,21 @@ class ResultsGroupManager(list):
         """
         for result in result_queryset:
             match_name = result.match_name()
-            results_group = self.find_results_group(match_name)
-            if results_group is None:
-                results_group = self.add_results_group(ResultsGroup(match_name))
+            if not self.is_result_group_exists(match_name):
+                self.add_results_group(match_name)
+            results_group = self.get_result_group_with_match_name(match_name)
             results_group.add_result(result)
 
-    def add_results_group(self, results_group):
-        self.append(results_group)
-        return results_group
+    def is_result_group_exists(self, match_name):
+        """
+        Returns True if result group with match name is exists.
+        """
+        for results_group in self:
+            if results_group.match_name == match_name:
+                return True
+        return False
 
-    def get_results_groups(self):
-        return self
-
-    def find_results_group(self, match_name):
+    def get_result_group_with_match_name(self, match_name):
         for results_group in self:
             if results_group.match_name == match_name:
                 return results_group
@@ -104,10 +119,25 @@ class ResultsGroupManager(list):
                 results_group_copy.remove(results_group)
         return results_group_copy
 
+    def add_results_group(self, match_name):
+        self.append(ResultsGroup(match_name))
+
+    def get_results_groups(self):
+        return self
+
 
 class WinAndResultCountByRace(dict):
+    """
+    This class shows player win count by opponent race.
+    This class can be operated with two functions.
+    To count all result, use save_all_result function.
+    To count related only specific player results,
+    use save_all_result_only_related_with_player function.
+    """
     player_race = ''
     opponent_race = ''
+    WIN_COUNT_INDEX = 0
+    RESULT_COUNT_INDEX = 1
 
     def __init__(self):
         super().__init__()
@@ -173,15 +203,41 @@ class WinAndResultCountByRace(dict):
             self.opponent_race = result['player_a_race']
 
     def add_one_win_result(self):
-        self[self.player_race][self.opponent_race][0] += 1
+        self[self.player_race][self.opponent_race][self.WIN_COUNT_INDEX] += 1
 
     def add_one_result(self):
-        self[self.player_race][self.opponent_race][1] += 1
+        self[self.player_race][self.opponent_race][self.RESULT_COUNT_INDEX] += 1
 
     def is_result_related_with_player(self, result, player_name):
         return player_name in [
             result['player_a__name'], result['player_b__name']
         ]
+
+
+"""
+TODO    아래의 Streak함수 RankAnnotation에서 사용할 수 있도록 바꾸기
+"""
+
+
+def get_win_and_lose_streak(results):
+    """
+    Get streak in results each player.
+    """
+    grouped_results_by_player = get_grouped_results_dict_by_player(results)
+
+    win_streaks = []
+    lose_streaks = []
+    for player_name, player_results in grouped_results_by_player.items():
+        streak = get_player_streak(player_results)
+        if streak > 0:
+            win_streaks.append((player_name, streak))
+        else:
+            lose_streaks.append((player_name, -1 * streak))
+
+    return {
+        'win_streaks': sorted(win_streaks, key=lambda x: x[1], reverse=True),
+        'lose_streaks': sorted(lose_streaks, key=lambda x: x[1], reverse=True)
+    }
 
 
 def get_grouped_results_dict_by_player(results):
@@ -215,77 +271,88 @@ def get_player_streak(player_results):
     return streak
 
 
-def get_win_and_lose_streak(results):
+class RankManager(metaclass=ABCMeta):
     """
-    Get streak in results each player.
+    Ranks on result queryset with given annotations from RankAnnotation classes.
+    After you inherit this class, you must add RankAnnotation classes to it.
     """
-    grouped_results_by_player = get_grouped_results_dict_by_player(results)
 
-    win_streaks = []
-    lose_streaks = []
-    for player_name, player_results in grouped_results_by_player.items():
-        streak = get_player_streak(player_results)
-        if streak > 0:
-            win_streaks.append((player_name, streak))
-        else:
-            lose_streaks.append((player_name, -1 * streak))
+    result_queryset = None
+    limit = 5
+    rank_annotations = []
 
-    return {
-        'win_streaks': sorted(win_streaks, key=lambda x: x[1], reverse=True),
-        'lose_streaks': sorted(lose_streaks, key=lambda x: x[1], reverse=True)
+    def get_top_players(self):
+        self.ranks_on_result_queryset()
+        return self.result_queryset
+
+    def ranks_on_result_queryset(self):
+        rank_annotations_kwargs = self.get_rank_annotations_kwargs()
+        self.set_result_queryset(
+            self.result_queryset.values(
+                'player__name'
+            ).order_by(
+                'player__name'
+            ).annotate(
+                **rank_annotations_kwargs  # convert dictionary to expression
+            ).values(
+                'player__name',
+                *list(rank_annotations_kwargs.keys())
+            )
+        )
+
+    def get_rank_annotations_kwargs(self):
+        rank_annotations_kwargs = {}
+        for rank_annotation in self.rank_annotations:
+            rank_annotations_kwargs.update(
+                rank_annotation.get_annotation()
+            )
+        return rank_annotations_kwargs
+
+    def set_rank_annotations(self, rank_annotations):
+        self.rank_annotations = rank_annotations
+
+    def set_result_queryset(self, result_queryset):
+        self.result_queryset = result_queryset
+
+
+class MeleeRankManager(RankManager):
+    def __init__(self, result_queryset):
+        self.set_result_queryset(result_queryset)
+        self.set_rank_annotations(
+            [
+                WinCountRankAnnotation(),
+                LoseCountRankAnnotation(),
+                ResultCountRankAnnotation(),
+                WinRateRankAnnotation(),
+            ]
+        )
+
+
+class RankAnnotation(metaclass=ABCMeta):
+    """
+    This class was abstracted to have different annotation by rank category.
+    If you inherit this class and define annotation by rank category,
+    you can used it in rank manager class.
+    """
+    annotation = None
+
+    def get_annotation(self):
+        return self.annotation
+
+
+class WinCountRankAnnotation(RankAnnotation):
+    annotation = {
+        'win_count':
+        Sum(
+            Cast('is_win', output_field=IntegerField())
+        )
     }
 
 
-def get_results_group_by_player_name(results):
-    """
-    Get results what grouped by player name.
-    """
-    return results.values('player__name').order_by('player__name')
-
-
-def get_players_result_count(results):
-    """
-    Get player's result count that grouped by its name.
-    """
-    return get_results_group_by_player_name(results).annotate(
-        # Add criteria for same rate player.
-        result_count=Count('id')
-    )
-
-
-def get_players_of_win_rate(results):
-    """
-    Get all player's win rate.
-    """
-    return get_win_rate(
-        get_players_result_count(results)
-    ).order_by(
-        '-win_rate', '-result_count'
-    ).values(
-        'player__name', 'win_rate', 'result_count'
-    )
-
-
-def get_players_of_result_count(results):
-    """
-    Get all player's result count.
-    """
-    return get_players_result_count(
-        results
-    ).order_by('-result_count').values('player__name', 'result_count')
-
-
-def get_win_and_lose_count(results):
-    """
-    Get win and lose count of results.
-    """
-    return get_results_group_by_player_name(
-        results
-    ).annotate(
-        win_count=Sum(
-            Cast('is_win', output_field=IntegerField())
-        ),
-        lose_count=Sum(
+class LoseCountRankAnnotation(RankAnnotation):
+    annotation = {
+        'lose_count':
+        Sum(
             Case(
                 When(
                     is_win=False, then=1
@@ -293,27 +360,20 @@ def get_win_and_lose_count(results):
                 default=0, output_field=IntegerField()
             )
         )
-    ).values('player__name', 'win_count', 'lose_count')
-
-
-def get_top_n_players(results, player_number):
-    """
-    Get top n players of each category.
-    """
-    win_and_lose_count = get_win_and_lose_count(results)
-    win_and_lose_streak = get_win_and_lose_streak(results)
-    return {
-        'win_count':
-        win_and_lose_count.order_by('-win_count')[:player_number],
-        'lose_count':
-        win_and_lose_count.order_by('-lose_count')[:player_number],
-        'win_rate':
-        get_players_of_win_rate(results)[:player_number],
-        'result_count':
-        get_players_of_result_count(results)[:player_number],
-        'win_streak':
-        win_and_lose_streak['win_streaks'][:player_number],
-        'lose_streak':
-        win_and_lose_streak['lose_streaks'][:player_number],
     }
 
+
+class ResultCountRankAnnotation(RankAnnotation):
+    annotation = {
+        'result_count':
+        Count('id')
+    }
+
+
+class WinRateRankAnnotation(RankAnnotation):
+    annotation = {
+        'win_rate':
+        Avg(
+            Cast('is_win', output_field=IntegerField()) * 100
+        )
+    }
