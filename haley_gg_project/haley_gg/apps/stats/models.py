@@ -169,13 +169,14 @@ class League(models.Model):
         results = self.results.all()
         melee_results = self.results.filter(type="melee")
         win_and_result_count_by_race = WinAndResultCountByRace()
-        win_and_result_count_by_race.save_all_result(melee_results)
+        win_and_result_count_by_race.save_all_result(melee_results)  # makes simillar queries!
         rank_manager = MeleeRankManager(melee_results)
         return {
             'league_name': self.slugify_str(),
             'grouped_league_results': ResultsGroupManager(results),
-            'race_relative_count': win_and_result_count_by_race,
-            'top_players': rank_manager.get_top_players()
+            # 'race_relative_count': win_and_result_count_by_race,
+            'top_players':
+            rank_manager.get_ordered_annotated_result_dict_by_each_categories()  # makes simillar quries!
         }
 
 
@@ -206,7 +207,8 @@ class Map(models.Model):
         rank_manager = MeleeRankManager(melee_results)
         return {
             'win_rate_by_race': win_and_result_count_by_race,
-            'top_players': rank_manager.get_top_players()
+            'top_players': 
+            rank_manager.get_ordered_annotated_result_dict_by_each_categories()
         }
 
 

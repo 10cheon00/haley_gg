@@ -1,6 +1,6 @@
 from abc import ABCMeta
 
-from django.db.models import Avg
+from django.db.models import Avg, F
 from django.db.models import Count
 from django.db.models import Sum
 from django.db.models import Case
@@ -215,7 +215,7 @@ class WinAndResultCountByRace(dict):
 
 
 """
-TODO    아래의 Streak함수 RankAnnotation에서 사용할 수 있도록 바꾸기
+TODO    아래의 Streak함수 RankExpression에서 사용할 수 있도록 바꾸기
 """
 
 
@@ -271,109 +271,135 @@ def get_player_streak(player_results):
     return streak
 
 
-class RankManager(metaclass=ABCMeta):
+class BaseRankManager(metaclass=ABCMeta):
     """
-    Ranks on result queryset with given annotations from RankAnnotation classes.
-    After you inherit this class, you must add RankAnnotation classes to it.
+    Ranks on result queryset with given annotations from RankExpression classes.
+    After you inherit this class, you must add RankExpression classes to it.
     """
 
     result_queryset = None
     limit = 5
-    rank_annotations = []
+    rank_expression_dict = {}
+    annotated_result_dict = {}
 
-    def get_top_players(self):
-        self.ranks_on_result_queryset()
-        return self.result_queryset
+    def get_ordered_annotated_result_dict_by_each_categories(self):
+        self.convert_ranked_result_queryset_to_annotated_result_dict()
+        return self.sort_annotated_result_dict_by_categories()
 
-    def ranks_on_result_queryset(self):
-        rank_annotations_kwargs = self.get_rank_annotations_kwargs()
-        self.set_result_queryset(
-            self.result_queryset.values(
-                'player__name'
-            ).order_by(
-                'player__name'
-            ).annotate(
-                **rank_annotations_kwargs  # convert dictionary to expression
-            ).values(
-                'player__name',
-                *list(rank_annotations_kwargs.keys())
-            )
+    def convert_ranked_result_queryset_to_annotated_result_dict(self):
+        self.set_annotated_result_dict(
+            self.get_result_queryset_annotate_with_rank_expression_dict()
         )
 
-    def get_rank_annotations_kwargs(self):
-        rank_annotations_kwargs = {}
-        for rank_annotation in self.rank_annotations:
-            rank_annotations_kwargs.update(
-                rank_annotation.get_annotation()
-            )
-        return rank_annotations_kwargs
+    def sort_annotated_result_dict_by_categories(self):
+        """
+        각 카테고리별로 내림차순 정렬.
+        그런데 queryset.values()가 순수 딕셔너리가 아니더라.
+        """
+        result_dict = {}
+        for category in self.rank_expression_dict.keys():
+            result_dict.update({
+                category:
+                self.get_ordered_annotated_result_dict_by_category(category)
+            })
 
-    def set_rank_annotations(self, rank_annotations):
-        self.rank_annotations = rank_annotations
+        return result_dict
+
+    def get_result_queryset_annotate_with_rank_expression_dict(self):
+        return self.result_queryset.values(
+            'player__name'
+        ).order_by(
+            'player__name'
+        ).annotate(
+            **self.rank_expression_dict  # convert dictionary to expression
+        )
+
+    def get_ordered_annotated_result_dict_by_category(self, category):
+        if self.is_category_in_rank_expression_dict(category):
+            return self.get_annotated_result_dict(
+            ).order_by(
+                F(category).desc()
+            ).values(
+                'player__name',
+                category
+            )
+        else:
+            return self.get_annotated_result_dict()
+
+    def set_rank_expression_dict(self, *rank_expression_dict_args):
+        for rank_expression_dict in rank_expression_dict_args:
+            self.rank_expression_dict.update(rank_expression_dict)
 
     def set_result_queryset(self, result_queryset):
         self.result_queryset = result_queryset
 
+    def set_annotated_result_dict(self, dict):
+        self.annotated_result_dict = dict
 
-class MeleeRankManager(RankManager):
+    def get_annotated_result_dict(self):
+        return self.annotated_result_dict
+
+    def is_category_in_rank_expression_dict(self, category):
+        return category in self.rank_expression_dict.keys()
+
+
+class MeleeRankManager(BaseRankManager):
     def __init__(self, result_queryset):
         self.set_result_queryset(result_queryset)
-        self.set_rank_annotations(
-            [
-                WinCountRankAnnotation(),
-                LoseCountRankAnnotation(),
-                ResultCountRankAnnotation(),
-                WinRateRankAnnotation(),
-            ]
+        self.set_rank_expression_dict(
+            WinCountRankExpressionDict(),
+            LoseCountRankExpressionDict(),
+            ResultCountRankExpressionDict(),
+            WinRateRankExpressionDict(),
         )
 
 
-class RankAnnotation(metaclass=ABCMeta):
+class BaseRankExpressionDict(dict, metaclass=ABCMeta):
     """
-    This class was abstracted to have different annotation by rank category.
-    If you inherit this class and define annotation by rank category,
+    This class was abstracted to have different expression by rank category.
+    If you inherit this class and define expression by rank category,
     you can used it in rank manager class.
     """
-    annotation = None
-
-    def get_annotation(self):
-        return self.annotation
 
 
-class WinCountRankAnnotation(RankAnnotation):
-    annotation = {
-        'win_count':
-        Sum(
-            Cast('is_win', output_field=IntegerField())
-        )
-    }
-
-
-class LoseCountRankAnnotation(RankAnnotation):
-    annotation = {
-        'lose_count':
-        Sum(
-            Case(
-                When(
-                    is_win=False, then=1
-                ),
-                default=0, output_field=IntegerField()
+class WinCountRankExpressionDict(BaseRankExpressionDict):
+    def __init__(self):
+        self.update({
+            'win_count':
+            Sum(
+                Cast('is_win', output_field=IntegerField())
             )
-        )
-    }
+        })
 
 
-class ResultCountRankAnnotation(RankAnnotation):
-    annotation = {
-        'result_count':
-        Count('id')
-    }
+class LoseCountRankExpressionDict(BaseRankExpressionDict):
+    def __init__(self):
+        self.update({
+            'lose_count':
+            Sum(
+                Case(
+                    When(
+                        is_win=False, then=1
+                    ),
+                    default=0, output_field=IntegerField()
+                )
+            )
+        })
 
 
-class WinRateRankAnnotation(RankAnnotation):
-    annotation = {
-        'win_rate':
-        Avg(
-            Cast('is_win', output_field=IntegerField()) * 100
-        )
-    }
+class ResultCountRankExpressionDict(BaseRankExpressionDict):
+    def __init__(self):
+        self.update({
+            'result_count':
+            Count('id')
+        })
+
+
+class WinRateRankExpressionDict(BaseRankExpressionDict):
+    def __init__(self):
+        self.update({
+            'win_rate':
+            Avg(
+                Cast('is_win', output_field=IntegerField()) * 100
+            )
+        })

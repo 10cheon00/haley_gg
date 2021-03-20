@@ -1,8 +1,4 @@
-{% for player in top_players %}
-    {{ player}}<br>
-{% endfor %}
-
-<!-- <div class="row d-flex text-center">
+<div class="row d-flex text-center">
     <div class="col-md">
         다전 순위
         <hr>
@@ -14,7 +10,7 @@
         승률 순위
         <hr>
         {% for player in top_players.win_rate %}
-            {{ player.player__name }} : {{ player.win_rate|floatformat:1 }} ( {{ player.result_count }} )<br>
+            {{ player.player__name }} : {{ player.win_rate|floatformat:1 }}%<br>
         {% endfor %}
     </div>
     <div class="col-md">
@@ -45,4 +41,4 @@
             {{ data.0 }} : {{ data.1 }}연패 <br/>
         {% endfor %}
     </div>
-</div> -->
+</div>
