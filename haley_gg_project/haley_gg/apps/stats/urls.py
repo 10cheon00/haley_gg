@@ -14,5 +14,6 @@ urlpatterns = [
     path('player/<name>/update', views.PlayerUpdateView.as_view(), name='update_player'),
     path('map/', views.MapListView.as_view(), name='map_list'),
     path('map/<name>/', views.MapDetailView.as_view(), name='map'),
+    path('map/<name>/update/', views.MapUpdateView.as_view(), name='update_map'),
     path('compare/', views.CompareUserView.as_view(), name='compare')
 ]

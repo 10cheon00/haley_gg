@@ -1,7 +1,6 @@
 from django.shortcuts import render
 from django.shortcuts import redirect
 from django.shortcuts import reverse
-from django.shortcuts import get_object_or_404
 from django.views.generic import TemplateView
 from django.views.generic import View
 from django.views.generic import ListView
@@ -17,10 +16,11 @@ from haley_gg.apps.stats.forms import get_pvp_data_formset
 from haley_gg.apps.stats.forms import ResultForm
 from haley_gg.apps.stats.forms import CompareUserForm
 from haley_gg.apps.stats.forms import UpdatePlayerForm
-from haley_gg.apps.stats.utils import remove_space
+from haley_gg.apps.stats.forms import UpdateMapForm
 from haley_gg.apps.stats.utils import ResultsGroupManager
 from haley_gg.apps.stats.mixins import LeagueStatisticMixin
 from haley_gg.apps.stats.mixins import PlayerSelectMixin
+from haley_gg.apps.stats.mixins import MapSelectMixin
 
 
 class ResultListView(ListView):
@@ -68,25 +68,12 @@ class ResultCreateView(View):
 
 class ProleagueView(LeagueStatisticMixin, TemplateView):
     template_name = 'stats/leagues/proleague.html'
-    queryset = League.objects.filter(
-        type='proleague'
-    ).prefetch_related(
-        'teams',
-        'results',
-        'results__map',
-        'results__player',
-    )
+    melee_queryset = Result.melee.filter(league__type='proleague')
 
 
 class StarleagueView(LeagueStatisticMixin, TemplateView):
     template_name = 'stats/leagues/starleague.html'
-    queryset = League.objects.filter(
-        type='starleague'
-    ).prefetch_related(
-        'results',
-        'results__map',
-        'results__player',
-    )
+    melee_queryset = Result.melee.filter(league__type='starleague')
 
 
 class PlayerDetailView(PlayerSelectMixin, DetailView):
@@ -130,27 +117,27 @@ class MapListView(ListView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['maps'] = context['object_list'].annotate(
-            result_count=Count('results')/2
+            result_count=Count('results')/2  #  occured exception on teamplay.
         ).order_by('-result_count', 'name')
         # 맵리스트 표시, 형식은 자유
         # 맵마다 경기 수 표시
         return context
 
 
-class MapDetailView(DetailView):
+class MapDetailView(MapSelectMixin, DetailView):
     model = Map
     template_name = 'stats/maps/detail.html'
-
-    def get_object(self):
-        return get_object_or_404(
-            Map,
-            name__iexact=remove_space(self.kwargs['name'])
-        )
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context.update(self.object.get_statistics())
         return context
+
+
+class MapUpdateView(MapSelectMixin, UpdateView):
+    model = Map
+    template_name = 'stats/maps/update.html'
+    form_class = UpdateMapForm
 
 
 class CompareUserView(View):

@@ -1,19 +1,27 @@
 {% extends 'base.html' %} 
-{% block title %}플레이어&nbsp;-&nbsp;{{ player.name }}{% endblock title %}
+{% block title %}{{ player.name }} - 전적, 통계{% endblock title %}
 {% block content %}
 {% load static %}
 <div class="profile">
-    <!--   Player   -->
+    <!--   Profile   -->
     <div class="rounded-0 text-secondary bg-light p-3 {{ player.most_race }}">
         <div class="h1">
             {{ player.name }}
-            <span class="h4">{{ player.most_race }}</span>
+            <span class="h4">
+                {{ player.most_race }}
+            </span>
             <span class="h3">
                 &#65372;
-                {% for i in career.stars %}&#9733;{% endfor %}
+                {{ player.tier }}
+                &#65372;
+                {% for i in career.stars %}
+                    &#9733;
+                {% endfor %}
             </span>
         </div>
-        <small class="text-secondary">{{ player.joined_date }}에 가입</small>
+        <small class="text-secondary">
+            {{ player.joined_date }}에 가입
+        </small>
         <!--   Career   -->
         <div>
             {% for badge in career.badges %}
@@ -32,7 +40,7 @@
         <div class="h2">
             최근 전적
             <span class="h4">
-                총 승률 : {{ win_rate|floatformat:1 }}%&nbsp;|&nbsp;{{ streak }}
+                총 승률 : {{ win_rate }}%&nbsp;|&nbsp;{{ streak }}연승
             </span>
         </div>
     </div>

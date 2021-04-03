@@ -36,22 +36,19 @@ def calculate_percentage(numerator, denominator):
         return 0
 
 
-def get_win_rate(results):
+def get_player_win_rate(results):
     """
-    Get rate from result queryset with is_win field.
+    Get rate from player's result queryset with is_win field.
     """
-    return results.annotate(
+    win_rate = results.values(
+        'player__name'
+    ).aggregate(
         win_rate=Avg(
             Cast('is_win', output_field=IntegerField()) * 100
         )
-    )
-
-
-def get_results_group_by_player_name(results):
-    """
-    Get results what grouped by player name.
-    """
-    return results.values('player__name').order_by('player__name')
+    )['win_rate']
+    rounded_win_rate = round(win_rate, 1)
+    return rounded_win_rate
 
 
 class ResultsGroup(list):

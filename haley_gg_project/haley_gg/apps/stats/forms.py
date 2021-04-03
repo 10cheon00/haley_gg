@@ -28,6 +28,12 @@ class SearchPlayerForm(forms.Form):
 
 
 class UpdatePlayerForm(forms.ModelForm):
+    tier_list = [
+        ('major', '메이저'),
+        ('minor', '마이너'),
+        ('rookie', '루키')
+    ]
+
     class Meta:
         model = Player
         fields = [
@@ -35,6 +41,7 @@ class UpdatePlayerForm(forms.ModelForm):
             'joined_date',
             'most_race',
             'career',
+            'tier',
         ]
         widgets = {
             'name': forms.TextInput(
@@ -53,6 +60,29 @@ class UpdatePlayerForm(forms.ModelForm):
                 attrs={'class': 'form-control'}
             ),
             'career': forms.Textarea(
+                attrs={'class': 'form-control'}
+            ),
+            'tier': forms.Select(
+                attrs={'class': 'form-control'}
+            )
+        }
+
+
+class UpdateMapForm(forms.ModelForm):
+    class Meta:
+        model = Map
+        fields = (
+            'name',
+            'type',
+        )
+        widgets = {
+            'name': forms.TextInput(
+                attrs={
+                    'type': 'text',
+                    'class': 'form-control',
+                }
+            ),
+            'type': forms.Select(
                 attrs={'class': 'form-control'}
             )
         }
@@ -104,7 +134,7 @@ class PVPDataForm(forms.Form):
         label="게임 타입",
         choices=[
             ('melee', '밀리'),
-            ('top_and_bottom', '팀플')
+            ('teamplay', '팀플')
         ],
         widget=forms.Select(
             attrs={
@@ -243,7 +273,7 @@ class PVPDataFormSet(forms.BaseFormSet):
             # Check that all type are equal.
             error_msg = '팀플 타입이 아닙니다.'
             for form in form_list:
-                if form.cleaned_data.get('type') != 'top_and_bottom':
+                if form.cleaned_data.get('type') != 'teamplay':
                     form.add_error('type', error_msg)
                 if len(map_error_msg) == 0:
                     form.add_error('map', map_error_msg)

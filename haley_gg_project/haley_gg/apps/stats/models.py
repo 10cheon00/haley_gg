@@ -1,20 +1,25 @@
+from django.shortcuts import reverse
+from django.utils import timezone
 from django.db import models
 from django.db.models import Q
+from django.db.models import Value
+from django.db.models import F
 from django.db.models import Sum
+from django.db.models import Min
 from django.db.models import Avg
+from django.db.models import Window
+from django.db.models import OuterRef
+from django.db.models import Subquery
+from django.db.models.functions import RowNumber
 from django.db.models.functions import Cast
-from django.utils import timezone
-from django.shortcuts import reverse
 
 from haley_gg.apps.stats.managers import MeleeManager
 from haley_gg.apps.stats.utils import slugify
 from haley_gg.apps.stats.utils import remove_space
 # from haley_gg.apps.stats.utils import calculate_percentage
-from haley_gg.apps.stats.utils import get_win_rate
+from haley_gg.apps.stats.utils import get_player_win_rate
 from haley_gg.apps.stats.utils import ResultsGroupManager
 from haley_gg.apps.stats.utils import WinAndResultCountByRace
-from haley_gg.apps.stats.utils import get_results_group_by_player_name
-from haley_gg.apps.stats.utils import get_player_streak
 from haley_gg.apps.stats.utils import MeleeRankManager
 
 
@@ -39,7 +44,17 @@ class Player(models.Model):
 
     joined_date = models.DateField(default=timezone.now)
 
-    career = models.TextField(default="아직 잠재력이 드러나지 않았습니다...")
+    career = models.TextField(default='아직 잠재력이 드러나지 않았습니다...')
+
+    tier = models.CharField(
+        default='rookie',
+        max_length=50,
+        choices=(
+            ('major', '메이저'),
+            ('minor', '마이너'),
+            ('rookie', '루키')
+        )
+    )
 
     class Meta:
         ordering = ['name']
@@ -70,11 +85,9 @@ class Player(models.Model):
             self.name
         )
         return {
-            'win_rate': get_win_rate(
-                get_results_group_by_player_name(self.results)
-            ).first()['win_rate'],
+            'win_rate': get_player_win_rate(self.results),
             'win_rate_by_race_dict': win_and_result_count_by_race,
-            'streak': get_player_streak(self.results.all()),
+            'streak': Result.get_player_streak(self.name),
         }
 
     def get_career_and_titles(self):
@@ -127,6 +140,71 @@ class Player(models.Model):
             ),
         }
         return context
+
+
+"""
+True
+True
+False
+False
+True
+...
+"""
+"""
+TODO
+
+1. Form에서 Result를 생성할 때 Elo도 같이 계산하도록 수정.
+2. Result가 Elo를 외래키로 갖고 있어야 하는지에 대한 생각 정리.
+    Result는 한 가지의 Elo를 갖는다. 즉 1대1 관계.
+    외래키로 만들어봐야 비용만 낭비되는거 아닌가... OneonOneKey?
+    개인 전적 페이지에서 Elo그래프를 보여주고, 전적 리스트에서도 보여줘야 한다.
+    누구의 elo인지도 구분할 수 있어야 하고...
+    Result에 elo값만 저장하는 필드만 만들고??
+
+     -> 당장은 미룸. 어차피 Result에서 조회만 하기 때문에 나중가서 생각하기.
+     -> 팀플레이때문에 Elo 필드는 null=True로 해야겠다.
+
+3. Elo 계산식을 갖다 쓰되 K값 계산식 참고.
+
+3-1. K값 계산식에 연승값이 참조되는데, 연승 및 연패는 어떻게 계산할지 생각 정리.
+
+
+- 계산식
+m = 연승/연패값 (절댓값)
+k = 32 + 1.641^(m-1) - 1
+w = 승리 여부 ( 승=1, 패=0 )
+변동 Elo = myElo +
+    k * (
+        w - (
+            1 /
+            (
+                1 + 10^((opElo-myElo)/400)
+            )
+        )
+    )
+
+ELO를 구현하기 위해 먼저 구현해야할 것
+1. 연승식
+2. 리그통계함수
+3. 통계객체
+
+
+"""
+
+
+class Elo(models.Model):
+    date = models.DateField(default=timezone.now)
+
+    value = models.IntegerField(default=0)
+
+    player = models.ForeignKey(
+        Player,
+        on_delete=models.CASCADE,
+        related_name='elo_list'
+    )
+
+    class Meta:
+        ordering = ['date']
 
 
 class League(models.Model):
@@ -186,6 +264,15 @@ class Map(models.Model):
         max_length=50
     )
 
+    type = models.CharField(
+        default='melee',
+        max_length=50,
+        choices=(
+            ('melee', '밀리맵'),
+            ('teamplay', '팀플맵'),
+        )
+    )
+
     class Meta:
         ordering = ['name']
 
@@ -237,10 +324,10 @@ class ProleagueTeam(models.Model):
     melee_lose = models.PositiveSmallIntegerField(
         default=0
     )
-    top_and_bottom_win = models.PositiveSmallIntegerField(
+    teamplay_win = models.PositiveSmallIntegerField(
         default=0
     )
-    top_and_bottom_lose = models.PositiveSmallIntegerField(
+    teamplay_lose = models.PositiveSmallIntegerField(
         default=0
     )
 
@@ -266,20 +353,23 @@ class ProleagueTeam(models.Model):
                 self.melee_lose += 1
         else:
             if result.is_win:
-                self.top_and_bottom_win += 1
+                self.teamplay_win += 1
             else:
-                self.top_and_bottom_lose += 1
+                self.teamplay_lose += 1
         self.save()
 
     def get_total_win(self):
-        return self.melee_win + self.top_and_bottom_win
+        return self.melee_win + self.teamplay_win
 
     def get_total_lose(self):
-        return self.melee_lose + self.top_and_bottom_lose
+        return self.melee_lose + self.teamplay_lose
 
 
 class Result(models.Model):
-    date = models.DateField(default=timezone.now)
+    date = models.DateField(
+        default=timezone.now,
+        db_index=True
+    )
 
     league = models.ForeignKey(
         League,
@@ -307,7 +397,7 @@ class Result(models.Model):
         max_length=20,
         choices=(
             ('melee', '밀리'),
-            ('top_and_bottom', '팀플')
+            ('teamplay', '팀플')
         )
     )
 
@@ -372,10 +462,13 @@ class Result(models.Model):
 
     class Meta:
         ordering = [
-            '-date',
-            '-title',
-            '-round',
-            '-is_win',
+            F('date').desc(),
+            F('title').desc(),
+            F('round').desc(),
+            F('is_win').desc(),
+        ]
+        indexes = [
+            models.Index(fields=['date', 'title', 'round', 'is_win'])
         ]
 
     def __str__(self):
@@ -405,3 +498,75 @@ class Result(models.Model):
             self.round,
         ]
         return ''.join(str_list)
+
+    @classmethod
+    def get_numbering_results_partition_by_player(cls):
+        queryset = cls.melee.annotate(
+            row_number=Window(
+                expression=RowNumber(),
+                partition_by=F('player__name'),
+                order_by=cls._meta.ordering
+            )
+        ).order_by(*cls._meta.ordering)
+        return queryset
+
+    @classmethod
+    def get_numbering_results_partition_by_player_with_player_name(
+        cls,
+        player_name
+    ):
+        queryset = cls.melee.filter(player__name=player_name).annotate(
+            row_number=Window(
+                expression=RowNumber(),
+                order_by=cls._meta.ordering
+            )
+        ).order_by(*cls._meta.ordering)
+        return queryset
+
+    @classmethod
+    def get_streak(cls):
+        queryset = cls.get_numbering_results_partition_by_player()
+        distinct_player_is_win = queryset.filter(
+            player__name=OuterRef('player__name')
+        ).order_by(
+            'is_win',
+            *cls._meta.ordering
+        ).distinct('is_win').values('row_number')
+
+        queryset = queryset.annotate(
+            win_row_number=distinct_player_is_win[:1],
+            lose_row_number=distinct_player_is_win[1:2],
+        ).annotate(
+            streak=F('win_row_number') - F('lose_row_number')
+        ).order_by(
+            'player__name'
+        ).distinct(
+            'player__name'
+        ).values('player__name', 'streak')
+        return queryset
+
+    @classmethod
+    def get_player_streak(cls, player_name):
+        queryset = \
+            cls.get_numbering_results_partition_by_player_with_player_name(
+                player_name
+            )
+
+        distinct_player_is_win = queryset.filter(
+            player__name=player_name
+        ).order_by(
+            'is_win',
+            *cls._meta.ordering
+        ).distinct('is_win').values('row_number')
+
+        queryset = queryset.annotate(
+            win_row_number=distinct_player_is_win[:1],
+            lose_row_number=distinct_player_is_win[1:2],
+        ).annotate(
+            streak=F('win_row_number') - F('lose_row_number')
+        ).order_by(
+            'player__name'
+        ).distinct(
+            'player__name'
+        ).values('player__name', 'streak')
+        return queryset
