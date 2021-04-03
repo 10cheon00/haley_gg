@@ -499,43 +499,71 @@ class Result(models.Model):
         ]
         return ''.join(str_list)
 
+    results_queryset = None
+    numbered_queryset = None
+    numbered_most_recent_win_and_lose_queryset = None
+    streak_queryset = None
+
     @classmethod
-    def get_numbering_results_partition_by_player(cls):
-        queryset = cls.melee.annotate(
+    def get_all_player_streak(cls):
+        """
+        How to get player's streaks?
+
+        1.  Give row numbers to all results.
+            It sorted in ascending order by date,
+            partitioned by player name.
+        2.  Find a most recent win and lose result,
+            annotates its row number to queryset.
+        3.  Substract win result's row number to lose result's row number.
+            It is streak!
+        """
+        cls.calculate_streak()
+
+        return cls.streak_queryset
+
+    @classmethod
+    def get_player_streak(cls, player_name):
+        cls.filter_only_result_queryset_related_with_player(player_name)
+        cls.calculate_streak()
+        return cls.streak_queryset
+
+    @classmethod
+    def calculate_streak(cls):
+        cls.numbering_on_results_queryset_partition_by_player()
+        cls.find_most_recent_win_and_lose_row_number_queryset()
+        cls.calculate_streak_with_win_and_lose_row_number_queryset()
+
+    @classmethod
+    def filter_only_result_queryset_related_with_player(cls, player_name):
+        cls.results_queryset = Result.melee.filter(
+            player__name__iexact=player_name
+        )
+
+    @classmethod
+    def numbering_on_results_queryset_partition_by_player(cls):
+        cls.numbered_queryset = cls.results_queryset.annotate(
             row_number=Window(
                 expression=RowNumber(),
                 partition_by=F('player__name'),
                 order_by=cls._meta.ordering
             )
         ).order_by(*cls._meta.ordering)
-        return queryset
 
     @classmethod
-    def get_numbering_results_partition_by_player_with_player_name(
-        cls,
-        player_name
-    ):
-        queryset = cls.melee.filter(player__name=player_name).annotate(
-            row_number=Window(
-                expression=RowNumber(),
-                order_by=cls._meta.ordering
-            )
-        ).order_by(*cls._meta.ordering)
-        return queryset
+    def find_most_recent_win_and_lose_row_number_queryset(cls):
+        cls.numbered_most_recent_win_and_lose_queryset = \
+            cls.numbered_queryset.filter(
+                player__name=OuterRef('player__name')
+            ).order_by(
+                'is_win',
+                *cls._meta.ordering
+            ).distinct('is_win').values('row_number')
 
     @classmethod
-    def get_streak(cls):
-        queryset = cls.get_numbering_results_partition_by_player()
-        distinct_player_is_win = queryset.filter(
-            player__name=OuterRef('player__name')
-        ).order_by(
-            'is_win',
-            *cls._meta.ordering
-        ).distinct('is_win').values('row_number')
-
-        queryset = queryset.annotate(
-            win_row_number=distinct_player_is_win[:1],
-            lose_row_number=distinct_player_is_win[1:2],
+    def calculate_streak_with_win_and_lose_row_number_queryset(cls):
+        cls.streak_queryset = cls.numbered_queryset.annotate(
+            win_row_number=cls.numbered_most_recent_win_and_lose_queryset[:1],
+            lose_row_number=cls.numbered_most_recent_win_and_lose_queryset[1:2],
         ).annotate(
             streak=F('win_row_number') - F('lose_row_number')
         ).order_by(
@@ -543,30 +571,3 @@ class Result(models.Model):
         ).distinct(
             'player__name'
         ).values('player__name', 'streak')
-        return queryset
-
-    @classmethod
-    def get_player_streak(cls, player_name):
-        queryset = \
-            cls.get_numbering_results_partition_by_player_with_player_name(
-                player_name
-            )
-
-        distinct_player_is_win = queryset.filter(
-            player__name=player_name
-        ).order_by(
-            'is_win',
-            *cls._meta.ordering
-        ).distinct('is_win').values('row_number')
-
-        queryset = queryset.annotate(
-            win_row_number=distinct_player_is_win[:1],
-            lose_row_number=distinct_player_is_win[1:2],
-        ).annotate(
-            streak=F('win_row_number') - F('lose_row_number')
-        ).order_by(
-            'player__name'
-        ).distinct(
-            'player__name'
-        ).values('player__name', 'streak')
-        return queryset
