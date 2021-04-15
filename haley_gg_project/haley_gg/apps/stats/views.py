@@ -6,7 +6,6 @@ from django.views.generic import View
 from django.views.generic import ListView
 from django.views.generic import DetailView
 from django.views.generic import UpdateView
-from django.db.models import Count
 
 from haley_gg.apps.stats.models import Result
 from haley_gg.apps.stats.models import League
@@ -18,7 +17,9 @@ from haley_gg.apps.stats.forms import CompareUserForm
 from haley_gg.apps.stats.forms import UpdatePlayerForm
 from haley_gg.apps.stats.forms import UpdateMapForm
 from haley_gg.apps.stats.utils import ResultsGroupManager
-from haley_gg.apps.stats.mixins import LeagueStatisticMixin
+from haley_gg.apps.stats.mixins import ProleagueStatisticMixin
+from haley_gg.apps.stats.mixins import StarleagueStatisticMixin
+from haley_gg.apps.stats.mixins import MapStatisticMixin
 from haley_gg.apps.stats.mixins import PlayerSelectMixin
 from haley_gg.apps.stats.mixins import MapSelectMixin
 
@@ -66,16 +67,6 @@ class ResultCreateView(View):
         return render(request, self.template_name, context)
 
 
-class ProleagueView(LeagueStatisticMixin, TemplateView):
-    template_name = 'stats/leagues/proleague.html'
-    melee_queryset = Result.melee.filter(league__type='proleague')
-
-
-class StarleagueView(LeagueStatisticMixin, TemplateView):
-    template_name = 'stats/leagues/starleague.html'
-    melee_queryset = Result.melee.filter(league__type='starleague')
-
-
 class PlayerDetailView(PlayerSelectMixin, DetailView):
     model = Player
     template_name = 'stats/players/detail.html'
@@ -110,18 +101,16 @@ class PlayerUpdateView(PlayerSelectMixin, UpdateView):
     form_class = UpdatePlayerForm
 
 
-class MapListView(ListView):
-    model = Map
-    template_name = 'stats/maps/list.html'
+class ProleagueView(ProleagueStatisticMixin, TemplateView):
+    template_name = 'stats/leagues/proleague.html'
 
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['maps'] = context['object_list'].annotate(
-            result_count=Count('results')/2  #  occured exception on teamplay.
-        ).order_by('-result_count', 'name')
-        # 맵리스트 표시, 형식은 자유
-        # 맵마다 경기 수 표시
-        return context
+
+class StarleagueView(StarleagueStatisticMixin, TemplateView):
+    template_name = 'stats/leagues/starleague.html'
+
+
+class MapView(MapStatisticMixin, TemplateView):
+    template_name = 'stats/maps/list.html'
 
 
 class MapDetailView(MapSelectMixin, DetailView):

@@ -1,5 +1,6 @@
 {% extends 'base.html' %} 
 {% block title %}{{ player.name }} - 전적, 통계{% endblock title %}
+{% block active_main %}active{% endblock active_main %}
 {% block content %}
 {% load static %}
 <div class="profile">
@@ -40,7 +41,7 @@
         <div class="h2">
             최근 전적
             <span class="h4">
-                총 승률 : {{ win_rate }}%&nbsp;|&nbsp;{{ streak }}연승
+                총 승률 : {{ win_rate }}%&nbsp;|&nbsp;{{ streak }}
             </span>
         </div>
     </div>
@@ -52,8 +53,8 @@
         <div class="h2">
             종족별 승률
         </div>
-        {% for key, value in win_rate_by_race_dict.items %}
-            {{ key }} : {{ value }}<br>
+        {% for key, data in win_and_lose_by_race.items %}
+            {{ key }} : {{ data }} <br>
         {% endfor %}
     </div>
 </div>

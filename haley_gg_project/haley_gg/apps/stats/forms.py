@@ -312,10 +312,10 @@ class PVPDataFormSet(forms.BaseFormSet):
                     type=cleaned_data.get('type'),
                     player=cleaned_data.get('winner'),
                     race=cleaned_data.get('winner_race'),
-                    player_a=cleaned_data.get('winner'),
-                    player_b=cleaned_data.get('loser'),
-                    player_a_race=cleaned_data.get('winner_race'),
-                    player_b_race=cleaned_data.get('loser_race'),
+                    winner=cleaned_data.get('winner'),
+                    loser=cleaned_data.get('loser'),
+                    winner_race=cleaned_data.get('winner_race'),
+                    loser_race=cleaned_data.get('loser_race'),
                     is_win=True
                 ),
                 Result(
@@ -327,10 +327,10 @@ class PVPDataFormSet(forms.BaseFormSet):
                     type=cleaned_data.get('type'),
                     player=cleaned_data.get('loser'),
                     race=cleaned_data.get('loser_race'),
-                    player_a=cleaned_data.get('winner'),
-                    player_b=cleaned_data.get('loser'),
-                    player_a_race=cleaned_data.get('winner_race'),
-                    player_b_race=cleaned_data.get('loser_race'),
+                    winner=cleaned_data.get('winner'),
+                    loser=cleaned_data.get('loser'),
+                    winner_race=cleaned_data.get('winner_race'),
+                    loser_race=cleaned_data.get('loser_race'),
                     is_win=False
                 )]
             )

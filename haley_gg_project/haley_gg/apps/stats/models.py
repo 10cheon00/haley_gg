@@ -2,25 +2,25 @@ from django.shortcuts import reverse
 from django.utils import timezone
 from django.db import models
 from django.db.models import Q
-from django.db.models import Value
 from django.db.models import F
 from django.db.models import Sum
-from django.db.models import Min
 from django.db.models import Avg
 from django.db.models import Window
 from django.db.models import OuterRef
-from django.db.models import Subquery
 from django.db.models.functions import RowNumber
+from django.db.models.functions import Coalesce
 from django.db.models.functions import Cast
 
 from haley_gg.apps.stats.managers import MeleeManager
 from haley_gg.apps.stats.utils import slugify
 from haley_gg.apps.stats.utils import remove_space
-# from haley_gg.apps.stats.utils import calculate_percentage
 from haley_gg.apps.stats.utils import get_player_win_rate
 from haley_gg.apps.stats.utils import ResultsGroupManager
-from haley_gg.apps.stats.utils import WinAndResultCountByRace
-from haley_gg.apps.stats.utils import MeleeRankManager
+from haley_gg.apps.stats.utils import stringify_streak_count
+from haley_gg.apps.stats.statistics import MeleeRankManager
+from haley_gg.apps.stats.statistics import PlayerWinAndLoseByRaceCalculator
+from haley_gg.apps.stats.statistics import TotalLeagueWinAndLoseByRaceCalculator
+from haley_gg.apps.stats.statistics import TotalMapWinAndLoseByRaceCalculator
 
 
 class Player(models.Model):
@@ -71,23 +71,20 @@ class Player(models.Model):
         return reverse('stats:player', kwargs={'name': self.name})
 
     def get_statistics(self):
-        """
-        총 승률
-        최근 10경기 승률
-        종족별 승률
-        """
         # If no results from player, below sequences are skipped.
         if not self.results.exists():
             return {}
-        win_and_result_count_by_race = WinAndResultCountByRace()
-        win_and_result_count_by_race.save_all_result_only_related_with_player(
-            Result.melee.all(),
-            self.name
-        )
+
+        win_and_lose_calculator = \
+            PlayerWinAndLoseByRaceCalculator(self.results.filter(type='melee'))
+
+        streak_count = Result.get_player_streak_count(self.name)
+
         return {
             'win_rate': get_player_win_rate(self.results),
-            'win_rate_by_race_dict': win_and_result_count_by_race,
-            'streak': Result.get_player_streak(self.name),
+            # 'recent_10_results_win_rate': ???
+            'win_and_lose_by_race': win_and_lose_calculator.get_result(),
+            'streak': stringify_streak_count(streak_count),
         }
 
     def get_career_and_titles(self):
@@ -125,8 +122,12 @@ class Player(models.Model):
         """
         results = Result.objects.filter(
             Q(type='melee') &
-            (Q(player_a=self.id) & Q(player_b=opponent.id)) |
-            (Q(player_a=opponent.id) & Q(player_b=self.id))
+            (
+                Q(winner=self.id) & Q(loser=opponent.id)
+            ) |
+            (
+                Q(winner=opponent.id) & Q(loser=self.id)
+            )
         ).select_related('league', 'map', 'player')
         context = {
             'results': ResultsGroupManager(results),
@@ -142,14 +143,6 @@ class Player(models.Model):
         return context
 
 
-"""
-True
-True
-False
-False
-True
-...
-"""
 """
 TODO
 
@@ -233,28 +226,29 @@ class League(models.Model):
         return slugify(self.name)
 
     @classmethod
-    def get_league_statistics(cls, leagues):
-        league_list = []
-        for league in leagues:
-            league_list.append(league.get_statistics())
-        return {
-            'leagues': leagues,
-            'league_list': league_list,
-        }
+    def get_melee_statistics(cls, melee_result_queryset):
+        """
+        모든 리그의 밀리 데이터를 가지고 와서 한 번에 통계를 구한다.
+        """
 
-    def get_statistics(self):
-        # it must be get melee results, but this code isn't!
-        results = self.results.all()
-        melee_results = self.results.filter(type="melee")
-        win_and_result_count_by_race = WinAndResultCountByRace()
-        win_and_result_count_by_race.save_all_result(melee_results)  # makes simillar queries!
-        rank_manager = MeleeRankManager(melee_results)
+        rank_manager = MeleeRankManager(melee_result_queryset)
+
+        total_league_of_win_and_lose_by_race_calculator = \
+            TotalLeagueWinAndLoseByRaceCalculator(melee_result_queryset)
+
         return {
-            'league_name': self.slugify_str(),
-            'grouped_league_results': ResultsGroupManager(results),
-            # 'race_relative_count': win_and_result_count_by_race,
-            'top_players':
-            rank_manager.get_ordered_annotated_result_dict_by_each_categories()  # makes simillar quries!
+            # 'league_name': self.slugify_str(),
+
+            # TODO
+            # 이 코드도 각 리그별로 구할 뿐,
+            # 한 번에 구하도록 개선이 필요하다.
+            # 'grouped_league_results': ResultsGroupManager(results),
+
+            'total_league_of_win_and_lose_by_race_dict':
+            total_league_of_win_and_lose_by_race_calculator.get_result(),
+
+            'top_players': rank_manager.get_ranked_results(),
+            # 'top_players': rank_manager.get_ranked_result()
         }
 
 
@@ -282,21 +276,39 @@ class Map(models.Model):
     def get_absolute_url(self):
         return reverse('stats:map', kwargs={'name': self.name})
 
-    def get_statistics(self):
-        # Get all rate by race
-        # Need exception for teamplay map.
+    @classmethod
+    def get_melee_statistics(cls, melee_result_queryset):
+        total_map_of_win_and_lose_by_race_calculator = \
+            TotalMapWinAndLoseByRaceCalculator(melee_result_queryset)
 
-        melee_results = self.results.filter(type="melee")
-
-        # Get top 5 players of statistic items.
-        win_and_result_count_by_race = WinAndResultCountByRace()
-        win_and_result_count_by_race.save_all_result(melee_results)
-        rank_manager = MeleeRankManager(melee_results)
         return {
-            'win_rate_by_race': win_and_result_count_by_race,
-            'top_players': 
-            rank_manager.get_ordered_annotated_result_dict_by_each_categories()
+            'total_league_of_win_and_lose_by_race_dict':
+            total_map_of_win_and_lose_by_race_calculator.get_result()
         }
+
+    # def get_statistics(self):
+    #     # Get all rate by race
+    #     context = {}
+    #     results = self.results.filter(type=self.type)
+    #     """
+    #     TODO
+    #     각 리그마다 종족별 승수를 표시하고, 총계도 표시한다.
+    #     top player 고르는 것도 리그별로 해야 되지 않나??
+    #     계산하는 util함수들을 개선해야되겠다.
+    #     한 번에 전부 모든 리그를 조회하는 방식으로 변경해야 되지 않을까...
+    #     """
+    #     if self.type == 'melee':
+    #         map_statistics = MapWinAndLoseByRaceCalculator(results)
+
+    #         context['map_statistics'] = \
+    #             map_statistics.receive_calculated_result()
+
+
+        # rank_manager = MeleeRankManager(results)
+        # context['top_players'] = \
+        #     rank_manager.get_ordered_annotated_result_dict_by_each_categories()
+
+        # return context
 
 
 class ProleagueTeam(models.Model):
@@ -368,7 +380,6 @@ class ProleagueTeam(models.Model):
 class Result(models.Model):
     date = models.DateField(
         default=timezone.now,
-        db_index=True
     )
 
     league = models.ForeignKey(
@@ -379,12 +390,12 @@ class Result(models.Model):
 
     title = models.CharField(
         default='',
-        max_length=100
+        max_length=100,
     )
 
     round = models.CharField(
         default='',
-        max_length=100
+        max_length=100,
     )
 
     map = models.ForeignKey(
@@ -416,19 +427,19 @@ class Result(models.Model):
         )
     )
     # for convinience.
-    player_a = models.ForeignKey(
+    winner = models.ForeignKey(
         Player,
         on_delete=models.CASCADE,
-        related_name='results_player_a'
+        related_name='results_winner'
     )
 
-    player_b = models.ForeignKey(
+    loser = models.ForeignKey(
         Player,
         on_delete=models.CASCADE,
-        related_name='results_player_b'
+        related_name='results_loser'
     )
 
-    player_a_race = models.CharField(
+    winner_race = models.CharField(
         default='',
         max_length=10,
         choices=(
@@ -438,7 +449,7 @@ class Result(models.Model):
         )
     )
 
-    player_b_race = models.CharField(
+    loser_race = models.CharField(
         default='',
         max_length=10,
         choices=(
@@ -448,7 +459,9 @@ class Result(models.Model):
         )
     )
 
-    is_win = models.BooleanField(default=False)
+    is_win = models.BooleanField(
+        default=False,
+    )
 
     remarks = models.CharField(
         default='',
@@ -466,9 +479,6 @@ class Result(models.Model):
             F('title').desc(),
             F('round').desc(),
             F('is_win').desc(),
-        ]
-        indexes = [
-            models.Index(fields=['date', 'title', 'round', 'is_win'])
         ]
 
     def __str__(self):
@@ -505,7 +515,7 @@ class Result(models.Model):
     streak_queryset = None
 
     @classmethod
-    def get_all_player_streak(cls):
+    def get_all_player_streak_count(cls):
         """
         How to get player's streaks?
 
@@ -517,27 +527,32 @@ class Result(models.Model):
         3.  Substract win result's row number to lose result's row number.
             It is streak!
         """
-        cls.calculate_streak()
+        cls.set_results_queryset_to_all_results_queryset()
+        cls.calculate_streak_count()
 
         return cls.streak_queryset
 
     @classmethod
-    def get_player_streak(cls, player_name):
+    def set_results_queryset_to_all_results_queryset(cls):
+        cls.results_queryset = Result.objects.all()
+
+    @classmethod
+    def get_player_streak_count(cls, player_name):
         cls.filter_only_result_queryset_related_with_player(player_name)
-        cls.calculate_streak()
-        return cls.streak_queryset
-
-    @classmethod
-    def calculate_streak(cls):
-        cls.numbering_on_results_queryset_partition_by_player()
-        cls.find_most_recent_win_and_lose_row_number_queryset()
-        cls.calculate_streak_with_win_and_lose_row_number_queryset()
+        cls.calculate_streak_count()
+        return cls.streak_queryset.first()['count']
 
     @classmethod
     def filter_only_result_queryset_related_with_player(cls, player_name):
-        cls.results_queryset = Result.melee.filter(
+        cls.results_queryset = Result.objects.filter(
             player__name__iexact=player_name
         )
+
+    @classmethod
+    def calculate_streak_count(cls):
+        cls.numbering_on_results_queryset_partition_by_player()
+        cls.find_most_recent_win_and_lose_row_number_queryset()
+        cls.calculate_streak_count_with_win_and_lose_row_number_queryset()
 
     @classmethod
     def numbering_on_results_queryset_partition_by_player(cls):
@@ -560,14 +575,23 @@ class Result(models.Model):
             ).distinct('is_win').values('row_number')
 
     @classmethod
-    def calculate_streak_with_win_and_lose_row_number_queryset(cls):
+    def calculate_streak_count_with_win_and_lose_row_number_queryset(cls):
         cls.streak_queryset = cls.numbered_queryset.annotate(
             win_row_number=cls.numbered_most_recent_win_and_lose_queryset[:1],
             lose_row_number=cls.numbered_most_recent_win_and_lose_queryset[1:2],
         ).annotate(
-            streak=F('win_row_number') - F('lose_row_number')
+            count=Coalesce(
+                F('win_row_number'),
+                0
+            ) - Coalesce(
+                F('lose_row_number'),
+                0
+            )
         ).order_by(
             'player__name'
         ).distinct(
             'player__name'
-        ).values('player__name', 'streak')
+        ).values(
+            'player__name',
+            'count'
+        )

@@ -9,10 +9,22 @@
 
 {% block page_name %}{% endblock page_name %}
 
+{% for key, value in statistics.melee.top_players.items %}
+    {% for item in value %}
+        {{ item }}<br>
+    {% endfor %}
+{% endfor %}
+{% for league, win_and_lose_by_race in statistics.melee.total_league_of_win_and_lose_by_race_dict.items %}
+    {{ league }}<br>
+    {% for key, data in win_and_lose_by_race.items %}
+        {{ key }} : {{ data }}<br>
+    {% endfor %}
+{% endfor %}
+
 <!--   League Selector   -->
 
 <ul class="nav nav-pills">
-    {% for league in statistics.leagues %}
+    {% for league in statistics.melee.leagues %}
         <li class="nav-item">
             <a class="nav-link {% if forloop.counter == 1 %}active{% endif %}" 
                data-toggle="tab"
@@ -24,14 +36,18 @@
 </ul>
 <br>
 <!--   League content   -->
+<div>
+</div>
 <div class="tab-content">
-    {% for league_data in statistics.league_list %}
+    {% for league_data in statistics.melee.league_list %}
         <div class="tab-pane {% if forloop.counter == 1 %}show active{% endif %}" 
              id="{{ league_data.league_name }}">
             <!--   League statistics   -->
             <div class="d-flex justify-content-center">
-                {% for data in league_data.race_relative_count.values %}
-                    {{ data }}<br>
+                {% for league_name, win_and_result_count_by_race in league_data.race_relative_count.items %}
+                    {% for key, data in win_and_result_count_by_race.items %}
+                        {{ key }} : {{ data }} <br>
+                    {% endfor %}
                 {% endfor %}
             </div>
             <br/>

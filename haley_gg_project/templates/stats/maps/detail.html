@@ -8,8 +8,11 @@
 </div>
 <br>
 <div class="d-flex justify-content-center">
-    {% for data in win_rate_by_race.values %}
-        {{ data }}<br>
+    {% for map, win_and_lose_by_race in map_statistics.items %}
+        {{ map }}<br>
+        {% for key, data in win_and_lose_by_race.items %}
+            {{ key }} : {{ data }}<br>
+        {% endfor %}
     {% endfor %}
 </div>
 <hr>
