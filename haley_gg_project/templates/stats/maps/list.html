@@ -4,11 +4,13 @@
 {% block active_map %}active{% endblock active_map %}
 
 {% block content %}
-
-{% for map in maps %}
-    <a href="{{ map.get_absolute_url }}">
-        {{ map }}&nbsp;{{ map.result_count }}
-    </a>
-    <br>
+{% for map, leagues in statistics.melee.total_map_of_win_and_lose_by_race_dict.items %}
+    Map : {{ map }} <br>
+    {% for league, data in leagues.items %}
+        League : {{ league }}<br>
+        {% for key, value in data.items %}
+            {{ key }} : {{ value }}<br>
+        {% endfor %}
+    {% endfor %}
 {% endfor %}
 {% endblock content %}

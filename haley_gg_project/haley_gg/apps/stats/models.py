@@ -11,8 +11,7 @@ from django.db.models.functions import RowNumber
 from django.db.models.functions import Coalesce
 from django.db.models.functions import Cast
 
-from haley_gg.apps.stats.managers import MeleeManager
-from haley_gg.apps.stats.utils import slugify
+from haley_gg.apps.stats.managers import MeleeResultManager
 from haley_gg.apps.stats.utils import remove_space
 from haley_gg.apps.stats.utils import get_player_win_rate
 from haley_gg.apps.stats.utils import ResultsGroupManager
@@ -222,19 +221,16 @@ class League(models.Model):
     def __str__(self):
         return self.name
 
-    def slugify_str(self):
-        return slugify(self.name)
-
     @classmethod
-    def get_melee_statistics(cls, melee_result_queryset):
+    def get_melee_statistics(cls, melee_results):
         """
         모든 리그의 밀리 데이터를 가지고 와서 한 번에 통계를 구한다.
         """
 
-        rank_manager = MeleeRankManager(melee_result_queryset)
+        rank_manager = MeleeRankManager(melee_results)
 
         total_league_of_win_and_lose_by_race_calculator = \
-            TotalLeagueWinAndLoseByRaceCalculator(melee_result_queryset)
+            TotalLeagueWinAndLoseByRaceCalculator(melee_results)
 
         return {
             # 'league_name': self.slugify_str(),
@@ -277,41 +273,23 @@ class Map(models.Model):
         return reverse('stats:map', kwargs={'name': self.name})
 
     @classmethod
-    def get_melee_statistics(cls, melee_result_queryset):
+    def get_melee_statistics(cls, melee_results):
+
         total_map_of_win_and_lose_by_race_calculator = \
-            TotalMapWinAndLoseByRaceCalculator(melee_result_queryset)
+            TotalMapWinAndLoseByRaceCalculator(melee_results)
 
         return {
-            'total_league_of_win_and_lose_by_race_dict':
+            'total_map_of_win_and_lose_by_race_dict':
             total_map_of_win_and_lose_by_race_calculator.get_result()
         }
 
-    # def get_statistics(self):
-    #     # Get all rate by race
-    #     context = {}
-    #     results = self.results.filter(type=self.type)
-    #     """
-    #     TODO
-    #     각 리그마다 종족별 승수를 표시하고, 총계도 표시한다.
-    #     top player 고르는 것도 리그별로 해야 되지 않나??
-    #     계산하는 util함수들을 개선해야되겠다.
-    #     한 번에 전부 모든 리그를 조회하는 방식으로 변경해야 되지 않을까...
-    #     """
-    #     if self.type == 'melee':
-    #         map_statistics = MapWinAndLoseByRaceCalculator(results)
-
-    #         context['map_statistics'] = \
-    #             map_statistics.receive_calculated_result()
-
-
-        # rank_manager = MeleeRankManager(results)
-        # context['top_players'] = \
-        #     rank_manager.get_ordered_annotated_result_dict_by_each_categories()
-
-        # return context
-
 
 class ProleagueTeam(models.Model):
+    """
+    TODO
+    form에서 전적을 저장할 때 연결된 팀에도 결과를 누적하도록 수정.
+    """
+
     name = models.CharField(
         default='',
         max_length=100,
@@ -471,7 +449,7 @@ class Result(models.Model):
     )
 
     objects = models.Manager()
-    melee = MeleeManager()
+    melee = MeleeResultManager()
 
     class Meta:
         ordering = [

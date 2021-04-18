@@ -14,6 +14,7 @@
         {{ item }}<br>
     {% endfor %}
 {% endfor %}
+
 {% for league, win_and_lose_by_race in statistics.melee.total_league_of_win_and_lose_by_race_dict.items %}
     {{ league }}<br>
     {% for key, data in win_and_lose_by_race.items %}
@@ -22,7 +23,6 @@
 {% endfor %}
 
 <!--   League Selector   -->
-
 <ul class="nav nav-pills">
     {% for league in statistics.melee.leagues %}
         <li class="nav-item">

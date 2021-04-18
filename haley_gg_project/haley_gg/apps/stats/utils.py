@@ -3,19 +3,6 @@ from django.db.models import IntegerField
 from django.db.models.functions import Cast
 
 
-def slugify(text):
-    """
-    Slugify a given text.
-    """
-    non_url_safe = [
-        '"', '#', '$', '%', '&', '+',
-        ',', '/', ':', ';', '=', '?',
-        '@', '[', '\\', ']', '^', '`',
-        '{', '|', '}', '~', "'", ' ', '-'
-    ]
-    return text.translate(text.maketrans('', '', u''.join(non_url_safe)))
-
-
 def remove_space(text):
     return text.replace(' ', '')
 

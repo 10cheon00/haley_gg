@@ -9,7 +9,7 @@ from django.db.models import IntegerField
 from django.db.models.functions import Cast
 
 
-class WinAndLoseByRace(dict):
+class WinAndLoseByRaceData(dict):
     WIN_INDEX = 0
     LOSE_INDEX = 1
 
@@ -34,9 +34,9 @@ class WinAndLoseByRace(dict):
 class ResultsQuerysetDeduplicator:
     def __init__(self, results_queryset):
         self.queryset = results_queryset
-        self.run()
 
     def run(self):
+        # self.select_related_on_queryset()
         self.distinct_results_queryset()
         self.convert_results_queryset_to_dictionary()
 
@@ -47,108 +47,154 @@ class ResultsQuerysetDeduplicator:
             'league_id', 'title', 'round'
         )
 
+    def convert_results_queryset_to_dictionary(self):
+        self.queryset = self.queryset.values(
+            'league__name',
+            'title',
+            'round',
+            'is_win',
+            'winner_race',
+            'loser_race',
+            'map__name'
+        )
+
     def get_result(self):
         return self.queryset
 
-    def convert_results_queryset_to_dictionary(self):
-        self.queryset = self.queryset.values()
-
 
 class BaseWinAndLoseByRaceCalculator(metaclass=ABCMeta):
-    result = None
-    win_and_lose_by_race = None
-
     def __init__(self, queryset):
-        self.deduplicator = ResultsQuerysetDeduplicator(queryset)
-        self.initialize_win_and_lose_by_race()
+        self.queryset = queryset
+        self.deduplicate_queryset()
+        self.calculated_data = {}
         self.calculate()
 
-    @abstractmethod
-    def initialize_win_and_lose_by_race(self):
-        pass
+    def deduplicate_queryset(self):
+        self.deduplicator = ResultsQuerysetDeduplicator(self.queryset)
+        self.deduplicator.run()
+        self.queryset = self.deduplicator.get_result()
 
     @abstractmethod
     def calculate(self):
         pass
 
     def get_result(self):
-        return self.win_and_lose_by_race
+        return self.calculated_data
 
 
 class PlayerWinAndLoseByRaceCalculator(BaseWinAndLoseByRaceCalculator):
+
     def __init__(self, queryset):
         super().__init__(queryset)
-
-    def initialize_win_and_lose_by_race(self):
-        self.win_and_lose_by_race = WinAndLoseByRace()
+        self.player_race = ''
+        self.opponent_race = ''
 
     def calculate(self):
         """
-        여기선 WinAndLoseByRace의 Winner 항목이 플레이어가 된다.
-        그래서 winner를 player로 항상 설정해야한다.
+        Set result variable to WinAndLoseByRace object.
+        Because, this object only count player results.
+        So result is not categorize with keys
+        such as league name, map name etc.
         """
-        for result in self.deduplicator.get_result():
-            # Suppose player were won.
-            player_race = result['winner_race']
-            opponent_race = result['loser_race']
+        self.calculated_data = WinAndLoseByRaceData()
+        for result in self.queryset:
+            self.set_races(result)
 
-            # But player lose, swap both race.
-            if not result['is_win']:
-                player_race, opponent_race = opponent_race, player_race
-
-            self.win_and_lose_by_race.count_only_winner(
-                player_race, opponent_race
+            self.calculated_data.count_only_winner(
+                self.player_race, self.opponent_race
             )
+
+    def set_races(self, result):
+        """
+        In this calculator, fix up winner as player.
+        """
+        # Suppose player were won.
+        self.player_race = result['winner_race']
+        self.opponent_race = result['loser_race']
+
+        # But player lose, swap both race.
+        if not result['is_win']:
+            self.player_race, self.opponent_race = \
+                self.opponent_race, self.player_race
 
 
 class TotalLeagueWinAndLoseByRaceCalculator(
     BaseWinAndLoseByRaceCalculator
 ):
+
     def __init__(self, queryset):
         super().__init__(queryset)
-
-    def initialize_win_and_lose_by_race(self):
-        self.win_and_lose_by_race_dict = {}
+        self.league = ''
 
     def calculate(self):
-        for result in self.deduplicator.get_result():
-            # If league's WinAndLoseByRace doesn't exist, create it.
-            if not self.is_exists_WinAndLoseByRace_related(
-                result['league_id']
-            ):
-                self.win_and_lose_by_race_dict[result['league_id']] = \
-                    WinAndLoseByRace()
+        for result in self.queryset:
+            self.add_new_item_if_no_key_exists_in_calculated_data(result)
 
-            self.win_and_lose_by_race_dict[result['league_id']].count(
-                result['winner_race'],
-                result['loser_race']
+            self.calculated_data[self.league].count(
+                result['winner_race'], result['loser_race']
             )
 
-    def is_exists_WinAndLoseByRace_related(self, league_id):
-        return league_id in self.win_and_lose_by_race_dict
+    def add_new_item_if_no_key_exists_in_calculated_data(self, result):
+        self.set_league_key(result)
 
-    # override to return all of league data.
-    def get_result(self):
-        return self.win_and_lose_by_race_dict
+        if not self.is_league_key_exists_in_calculated_data():
+            self.create_value_with_league_key_in_calculated_data()
+
+    def set_league_key(self, result):
+        self.league = result['league__name']
+
+    def is_league_key_exists_in_calculated_data(self):
+        return self.league in self.calculated_data
+
+    def create_value_with_league_key_in_calculated_data(self):
+        self.calculated_data[self.league] = WinAndLoseByRaceData()
 
 
 class TotalMapWinAndLoseByRaceCalculator(
     BaseWinAndLoseByRaceCalculator
 ):
-    """
-    TODO
-    특정 맵이 아닌 모든 맵으로 바꿀 생각이다.
-    맵A
-    |-- 리그1에서 승패
-    `-- 리그2에서 승패
-    맵B
-    |-- ...
-    `-- ...
-    맵C
-    |--
-    `--
-    모든 맵의 정보를 갖고 있어야 하고, 맵마다 리그별 정보를 갖고 있어야 한다.
-    """
+
+    def __init__(self, queryset):
+        super().__init__(queryset)
+        self.map = ''
+        self.league = ''
+
+    def calculate(self):
+        for result in self.queryset:
+            self.add_new_item_if_no_key_exists_in_calculated_data(result)
+
+            self.calculated_data[self.map][self.league].count(
+                result['winner_race'], result['loser_race']
+            )
+
+    def add_new_item_if_no_key_exists_in_calculated_data(self, result):
+        # First, check map key is exists.
+        self.set_map_key(result)
+        if not self.is_map_key_exists_in_calculated_data():
+            self.create_dictionary_with_map_key_in_calculated_data()
+
+        # Secondary, check league key is exists with map key.
+        self.set_league_key(result)
+        if not self.is_league_key_exists_in_calculated_data_of_map():
+            self.create_value_with_league_key_in_calculated_data_of_map()
+
+    def set_map_key(self, result):
+        self.map = result['map__name']
+
+    def is_map_key_exists_in_calculated_data(self):
+        return self.map in self.calculated_data
+
+    def create_dictionary_with_map_key_in_calculated_data(self):
+        self.calculated_data[self.map] = {}
+
+    def set_league_key(self, result):
+        self.league = result['league__name']
+
+    def is_league_key_exists_in_calculated_data_of_map(self):
+        return self.league in self.calculated_data[self.map]
+
+    def create_value_with_league_key_in_calculated_data_of_map(self):
+        self.calculated_data[self.map][self.league] = WinAndLoseByRaceData()
 
 
 class BaseRankManager(metaclass=ABCMeta):
@@ -158,13 +204,12 @@ class BaseRankManager(metaclass=ABCMeta):
     """
     """
     """
-    queryset = None
-    limit = 5
-    rank_category_list = []
-    ranked_results = {}
 
     def __init__(self, queryset):
         self.queryset = queryset
+        self.limit = 5
+        self.rank_category_list = []
+        self.ranked_results = {}
 
     def ranks_on_queryset(self):
         self.group_queryset_by_league__name_and_player__name()
@@ -219,7 +264,8 @@ class MeleeRankManager(BaseRankManager):
 
 
 class BaseRankCategory(metaclass=ABCMeta):
-    category_name = ''
+    def __init__(self, category_name):
+        self.category_name = category_name
 
     @abstractmethod
     def get_annotated_queryset(self, queryset):
@@ -230,7 +276,8 @@ class BaseRankCategory(metaclass=ABCMeta):
 
 
 class WinCountRankCategory(BaseRankCategory):
-    category_name = 'win_count'
+    def __init__(self):
+        super().__init__(category_name='win_count')
 
     def get_annotated_queryset(self, queryset):
         return queryset.annotate(
@@ -241,7 +288,8 @@ class WinCountRankCategory(BaseRankCategory):
 
 
 class LoseCountRankCategory(BaseRankCategory):
-    category_name = 'lose_count'
+    def __init__(self):
+        super().__init__(category_name='lose_count')
 
     def get_annotated_queryset(self, queryset):
         return queryset.annotate(
@@ -252,7 +300,8 @@ class LoseCountRankCategory(BaseRankCategory):
 
 
 class ResultCountRankCategory(BaseRankCategory):
-    category_name = 'result_count'
+    def __init__(self):
+        super().__init__(category_name='result_count')
 
     def get_annotated_queryset(self, queryset):
         return queryset.annotate(
@@ -261,7 +310,8 @@ class ResultCountRankCategory(BaseRankCategory):
 
 
 class WinPercentageRankCategory(BaseRankCategory):
-    category_name = 'win_percentage'
+    def __init__(self):
+        super().__init__(category_name='win_percentage')
 
     def get_annotated_queryset(self, queryset):
         return queryset.annotate(
