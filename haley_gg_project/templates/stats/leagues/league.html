@@ -9,27 +9,30 @@
 
 {% block page_name %}{% endblock page_name %}
 
-{% for key, value in statistics.melee.top_players.items %}
-    {% for item in value %}
-        {{ item }}<br>
+{% for key, data in statistics.results.items %}
+    {{ key }}<br>
+    {% for result in data.values %}
+        {{ result }}<br>
+    {% endfor %}
+    <hr>
+{% endfor %}
+
+{% for key, data in statistics.calculator.items %}
+    {{ key }}<br>
+    {% for result in data.values %}
+        {{ result }}<br>
     {% endfor %}
 {% endfor %}
 
-{% for league, win_and_lose_by_race in statistics.melee.total_league_of_win_and_lose_by_race_dict.items %}
-    {{ league }}<br>
-    {% for key, data in win_and_lose_by_race.items %}
-        {{ key }} : {{ data }}<br>
-    {% endfor %}
-{% endfor %}
-
+{% comment "d" %}
 <!--   League Selector   -->
 <ul class="nav nav-pills">
-    {% for league in statistics.melee.leagues %}
+    {% for league in statistics.melee.keys %}
         <li class="nav-item">
             <a class="nav-link {% if forloop.counter == 1 %}active{% endif %}" 
                data-toggle="tab"
-               href="#{{ league.slugify_str }}">
-                {{ league }}
+               href="#{{ league }}">
+                {{ league|upper }}
             </a>
         </li>
     {% endfor %}
@@ -39,19 +42,19 @@
 <div>
 </div>
 <div class="tab-content">
-    {% for league_data in statistics.melee.league_list %}
+    {% for league, data in statistics.melee.items %}
         <div class="tab-pane {% if forloop.counter == 1 %}show active{% endif %}" 
-             id="{{ league_data.league_name }}">
+             id="{{ league }}">
             <!--   League statistics   -->
             <div class="d-flex justify-content-center">
-                {% for league_name, win_and_result_count_by_race in league_data.race_relative_count.items %}
-                    {% for key, data in win_and_result_count_by_race.items %}
+                {% for win_and_lose_by_race in data.win_and_lose_by_race.values %}
+                    {% for key, data in win_and_lose_by_race.items %}
                         {{ key }} : {{ data }} <br>
                     {% endfor %}
                 {% endfor %}
             </div>
             <br/>
-            {% with top_players=league_data.top_players %}
+            {% with top_players=data.top_players %}
                 {% include 'stats/results/top_players.html' %}
             {% endwith %}
             <!--   Results   -->
@@ -60,11 +63,12 @@
                 경기 결과
             </div>
             <hr>
-            {% with results_groups=league_data.grouped_league_results %}
+            {% with result_group_list=data %}
                 {% include 'stats/results/list.html' %}
             {% endwith %}
         </div>
     {% endfor %}
 </div>
+{% endcomment %}
 
 {% endblock content %}

@@ -16,27 +16,11 @@ from haley_gg.apps.stats.forms import ResultForm
 from haley_gg.apps.stats.forms import CompareUserForm
 from haley_gg.apps.stats.forms import UpdatePlayerForm
 from haley_gg.apps.stats.forms import UpdateMapForm
-from haley_gg.apps.stats.utils import ResultsGroupManager
 from haley_gg.apps.stats.mixins import ProleagueStatisticMixin
 from haley_gg.apps.stats.mixins import StarleagueStatisticMixin
 from haley_gg.apps.stats.mixins import MapStatisticMixin
 from haley_gg.apps.stats.mixins import PlayerSelectMixin
 from haley_gg.apps.stats.mixins import MapSelectMixin
-
-
-class ResultListView(ListView):
-    template_name = 'stats/results/list.html'
-    model = Result
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        queryset = Result.objects.select_related(
-            'map',
-            'league',
-            'player'
-        )
-        context['result_dict'] = ResultsGroupManager(queryset)
-        return context
 
 
 class ResultCreateView(View):
@@ -87,9 +71,8 @@ class PlayerDetailView(PlayerSelectMixin, DetailView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        manager = ResultsGroupManager(self.queryset)
-        context['results_groups'] = \
-            manager.get_results_groups_which_having_player(self.object.name)
+
+        context.update(self.object.get_result_group())
         context.update(self.object.get_statistics())
         context.update(self.object.get_career_and_titles())
         return context

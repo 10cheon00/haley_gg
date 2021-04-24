@@ -40,7 +40,7 @@
 <!--   compare data   -->
 {{ compare.data.statistics }}
 <!--   Results   -->
-{% with results_groups=compare.data.results %}
+{% with result_group_list=compare.data.results %}
     {% include 'stats/results/list.html' %}
 {% endwith %}
 {% endblock content %}

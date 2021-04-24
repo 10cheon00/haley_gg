@@ -1,5 +1,6 @@
 from django.shortcuts import reverse
 from django.utils import timezone
+from django.utils.text import slugify
 from django.db import models
 from django.db.models import Q
 from django.db.models import F
@@ -12,14 +13,15 @@ from django.db.models.functions import Coalesce
 from django.db.models.functions import Cast
 
 from haley_gg.apps.stats.managers import MeleeResultManager
+from haley_gg.apps.stats.managers import ProleagueResultManager
 from haley_gg.apps.stats.utils import remove_space
 from haley_gg.apps.stats.utils import get_player_win_rate
-from haley_gg.apps.stats.utils import ResultsGroupManager
+from haley_gg.apps.stats.utils import ResultGroupManager
+from haley_gg.apps.stats.utils import LeagueResultGroupManager
 from haley_gg.apps.stats.utils import stringify_streak_count
-from haley_gg.apps.stats.statistics import MeleeRankManager
+# from haley_gg.apps.stats.statistics import MeleeRankManager
 from haley_gg.apps.stats.statistics import PlayerWinAndLoseByRaceCalculator
-from haley_gg.apps.stats.statistics import TotalLeagueWinAndLoseByRaceCalculator
-from haley_gg.apps.stats.statistics import TotalMapWinAndLoseByRaceCalculator
+from haley_gg.apps.stats.statistics import LeagueWinAndLoseByRaceCalculator
 
 
 class Player(models.Model):
@@ -69,21 +71,43 @@ class Player(models.Model):
     def get_absolute_url(self):
         return reverse('stats:player', kwargs={'name': self.name})
 
+    def get_result_group(self):
+        """
+        TODO
+        ResultGroupManager와 get_select_related_on_result의 결합이 필요한지 생각하기.
+        Result.objects.all()에 winner_id와 loser_id를 조회해
+        플레이어가 연관된 전적만 갖고 올 수 없는지?
+        """
+        result_group_list_manager = ResultGroupManager(
+            Result.objects.filter(
+                Q(winner_id=self.id) |
+                Q(loser_id=self.id)
+            ).select_related(
+                'league', 'map', 'player', 'winner', 'loser'
+            )
+        )
+        return {
+            'result_group_list': result_group_list_manager.groups()
+        }
+
     def get_statistics(self):
         # If no results from player, below sequences are skipped.
         if not self.results.exists():
             return {}
 
-        win_and_lose_calculator = \
-            PlayerWinAndLoseByRaceCalculator(self.results.filter(type='melee'))
+        melee_results = self.results.filter(type='melee')
+        win_and_lose_by_race_calculator = \
+            PlayerWinAndLoseByRaceCalculator(melee_results)
 
         streak_count = Result.get_player_streak_count(self.name)
 
         return {
-            'win_rate': get_player_win_rate(self.results),
-            # 'recent_10_results_win_rate': ???
-            'win_and_lose_by_race': win_and_lose_calculator.get_result(),
-            'streak': stringify_streak_count(streak_count),
+            'win_rate':
+            get_player_win_rate(self.results),
+            'win_and_lose_by_race':
+            win_and_lose_by_race_calculator.calculate(),
+            'streak':
+            stringify_streak_count(streak_count),
         }
 
     def get_career_and_titles(self):
@@ -114,22 +138,15 @@ class Player(models.Model):
         }
 
     def versus(self, opponent):
-        """
-        1. 연관된 전적 조회
-        2. 승, 패 조회
-        3. 그 외 Elo, 랭킹들 조회
-        """
-        results = Result.objects.filter(
-            Q(type='melee') &
-            (
-                Q(winner=self.id) & Q(loser=opponent.id)
-            ) |
-            (
-                Q(winner=opponent.id) & Q(loser=self.id)
-            )
+        results = Result.melee.filter(
+            (Q(winner=self.id) & Q(loser=opponent.id)) |
+            (Q(winner=opponent.id) & Q(loser=self.id))
         ).select_related('league', 'map', 'player')
+
+        manager = ResultGroupManager(results)
+
         context = {
-            'results': ResultsGroupManager(results),
+            'results': manager.groups(),
             'statistics': results.filter(player=self.id).aggregate(
                 win_count=Sum(
                     Cast('is_win', output_field=models.IntegerField())
@@ -222,30 +239,37 @@ class League(models.Model):
         return self.name
 
     @classmethod
-    def get_melee_statistics(cls, melee_results):
+    def get_proleague_statistics(cls):
         """
-        모든 리그의 밀리 데이터를 가지고 와서 한 번에 통계를 구한다.
+        생각 정리
+         1. 쿼리셋을 나누면 비슷한 쿼리가 생성된다.
+            그래서 DB에 한 번만 요청해야겠다.
+            ResultGroup도 get_absolute_url을 사용하기 때문에
+            딕셔너리는 최종 결과가 되어선 안된다.
+         2. 모든 리그데이터를 나누지 말고 한 번에 연산을 수행 후
+            분류하는게 맞는 것 같다.
+
+        [x] 전적을 리그별로 모두 보여주기
+        [x] 리그별로 상성값을 모두 보여주기
+        [ ] 리그별로 랭킹을 모두 보여주기
         """
+        context = {}
 
-        rank_manager = MeleeRankManager(melee_results)
+        proleague_result_queryset = Result.proleague
+        manager = LeagueResultGroupManager(proleague_result_queryset.all())
+        context['results'] = manager.groups()
 
-        total_league_of_win_and_lose_by_race_calculator = \
-            TotalLeagueWinAndLoseByRaceCalculator(melee_results)
+        proleague_melee_result_queryset = \
+            proleague_result_queryset.get_melee_queryset()
+        calculator = LeagueWinAndLoseByRaceCalculator(
+            proleague_melee_result_queryset
+        )
+        context['calculator'] = calculator.calculate()
+        return context
 
-        return {
-            # 'league_name': self.slugify_str(),
-
-            # TODO
-            # 이 코드도 각 리그별로 구할 뿐,
-            # 한 번에 구하도록 개선이 필요하다.
-            # 'grouped_league_results': ResultsGroupManager(results),
-
-            'total_league_of_win_and_lose_by_race_dict':
-            total_league_of_win_and_lose_by_race_calculator.get_result(),
-
-            'top_players': rank_manager.get_ranked_results(),
-            # 'top_players': rank_manager.get_ranked_result()
-        }
+    @classmethod
+    def get_starleague_statistics(cls):
+        return {}
 
 
 class Map(models.Model):
@@ -274,13 +298,18 @@ class Map(models.Model):
 
     @classmethod
     def get_melee_statistics(cls, melee_results):
+        """
+        TODO
+        League.get_melee_statistic 구성때문에 잠시 주석처리.
+        개선 필요...
+        """
 
-        total_map_of_win_and_lose_by_race_calculator = \
-            TotalMapWinAndLoseByRaceCalculator(melee_results)
+        # total_map_of_win_and_lose_by_race_calculator = \
+        #     TotalMapWinAndLoseByRaceCalculator(melee_results)
 
         return {
-            'total_map_of_win_and_lose_by_race_dict':
-            total_map_of_win_and_lose_by_race_calculator.get_result()
+            # 'total_map_of_win_and_lose_by_race_dict':
+            # total_map_of_win_and_lose_by_race_calculator.get_result()
         }
 
 
@@ -450,6 +479,7 @@ class Result(models.Model):
 
     objects = models.Manager()
     melee = MeleeResultManager()
+    proleague = ProleagueResultManager()
 
     class Meta:
         ordering = [
@@ -463,7 +493,7 @@ class Result(models.Model):
         str_list = [
             str(self.date),
             ' | ',
-            self.match_name(),
+            self.get_match_name(),
             ' ',
             self.map.__str__(),
             ' | ',
@@ -477,7 +507,7 @@ class Result(models.Model):
         ]
         return ''.join(str_list)
 
-    def match_name(self):
+    def get_match_name(self):
         str_list = [
             self.league.__str__(),
             ' ',

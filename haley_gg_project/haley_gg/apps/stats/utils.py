@@ -7,16 +7,6 @@ def remove_space(text):
     return text.replace(' ', '')
 
 
-def calculate_percentage(numerator, denominator):
-    """
-    Get rate. Round to 3 decimal places.
-    """
-    try:
-        return round(numerator / denominator * 100, 2)
-    except ZeroDivisionError:
-        return 0
-
-
 def get_player_win_rate(results):
     """
     Get rate from player's result queryset with is_win field.
@@ -29,77 +19,114 @@ def get_player_win_rate(results):
     return win_rate
 
 
-class ResultsGroup(list):
+def get_deduplicated_result_queryset(queryset):
     """
-    Groups result data to distinguish matches.
-    This model used in template to show results by match.
+    Process distinct on queryset.
+    Return values are available for both melee and teamplay statistic manager.
+    """
+    field_list = [
+        'league__name',
+        'title',
+        'round',
+        'winner_race',
+        'loser_race'
+    ]
+    return queryset.order_by(*field_list).distinct(*field_list)
+
+
+class ResultGroup(list):
+    """
+    같은 경기 이름을 가진 result들을 모아놓는 자료구조.
     """
 
-    def __init__(self, name):
-        self.__match_name = name
+    def __init__(self):
+        self.winner = []
+        self.loser = []
 
     def add_result(self, result):
         self.append(result)
-
-    def get_results(self):
-        return self
-
-    def has_player(self, player_name):
-        return player_name in [result.player.name for result in self]
+        self.winner.append(result.winner)
+        self.loser.append(result.loser)
 
     def get_first_result(self):
         return self[0]
 
-    @property
-    def match_name(self):
-        return self.__match_name
+    def get_winners(self):
+        return self.winner
+
+    def get_losers(self):
+        return self.loser
 
 
-class ResultsGroupManager(list):
+class BaseDataClassifier(dict):
     """
-    This manager groups results into ResultGroup by match name.
-    In template, result must shown by matches, so grouping results is needed.
+    객체 내에 해당하는 key가 없을 경우 미리 정의된 객체를 생성한다.
+    """
+
+    def __init__(self):
+        self.data_structure = dict
+
+    def get_or_create(self, key):
+        return self.setdefault(key, self.data_structure())
+
+
+class ResultGroupDataClassifier(BaseDataClassifier):
+    """
+    match name을 기준으로 ResultGroup들을 관리한다.
+    """
+
+    def __init__(self):
+        self.data_structure = ResultGroup
+
+
+class LeagueDataClassifier(BaseDataClassifier):
+    """
+    league name을 기준으로 ResultGroupDataClassifier들을 관리한다.
+    """
+
+    def __init__(self):
+        self.data_structure = ResultGroupDataClassifier
+
+
+class ResultGroupManager(ResultGroupDataClassifier):
+    def __init__(self, result_queryset):
+        super().__init__()
+        self.__result_queryset = result_queryset
+
+    def groups(self):
+        for result in self.__result_queryset:
+            result_group = self.get_result_group(result)
+            result_group.add_result(result)
+        return self
+
+    def get_result_group(self, result):
+        result_group = self.get_or_create(result.get_match_name())
+        return result_group
+
+
+class LeagueResultGroupManager(LeagueDataClassifier):
+    """
+    리그를 기준으로 ResultGroup들을 관리한다.
+    결과값은 시간순으로 정렬되어 있는 result_group들이어야 한다.
     """
 
     def __init__(self, result_queryset):
         """
-        convert all result queryset to results group.
+        Convert all result queryset to results group.
         """
-        for result in result_queryset:
-            match_name = result.match_name()
-            if not self.is_result_group_exists(match_name):
-                self.add_results_group(match_name)
-            results_group = self.get_result_group_with_match_name(match_name)
-            results_group.add_result(result)
+        super().__init__()
+        self.__result_queryset = result_queryset
 
-    def get_results_groups_which_having_player(self, player_name):
-        results_group_copy = self[:]
-        results_group_having_player = [
-            result_group for result_group in results_group_copy
-            if result_group.has_player(player_name)
-        ]
-        return results_group_having_player
-
-    def is_result_group_exists(self, match_name):
-        """
-        Returns True if result group with match name is exists.
-        """
-        for results_group in self:
-            if results_group.match_name == match_name:
-                return True
-        return False
-
-    def add_results_group(self, match_name):
-        self.append(ResultsGroup(match_name))
-
-    def get_result_group_with_match_name(self, match_name):
-        for results_group in self:
-            if results_group.match_name == match_name:
-                return results_group
-        return None
-
-    def get_results_groups(self):
+    def groups(self):
+        for result in self.__result_queryset:
+            result_group = self.get_result_group(result)
+            result_group.add_result(result)
         return self
+
+    def get_result_group(self, result):
+        league_result_group_list = self.get_or_create(result.league.name)
+        result_group = league_result_group_list.get_or_create(result.get_match_name())
+        return result_group
 
 
 def stringify_streak_count(streak_count):

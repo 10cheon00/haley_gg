@@ -3,7 +3,6 @@ from abc import ABCMeta, abstractmethod
 from django.shortcuts import get_object_or_404
 
 from haley_gg.apps.stats.models import Player
-from haley_gg.apps.stats.models import Result
 from haley_gg.apps.stats.models import League
 from haley_gg.apps.stats.models import Map
 from haley_gg.apps.stats.utils import remove_space
@@ -29,29 +28,17 @@ class BaseStatisticMixin(metaclass=ABCMeta):
 
 class ProleagueStatisticMixin(BaseStatisticMixin):
     def get_statistics(self):
-        return {
-            'melee': League.get_melee_statistics(
-                Result.melee.get_proleague_results()
-            ),
-        }
+        return League.get_proleague_statistics()
 
 
 class StarleagueStatisticMixin(BaseStatisticMixin):
     def get_statistics(self):
-        return {
-            'melee': League.get_melee_statistics(
-                Result.melee.get_starleague_results()
-            )
-        }
+        return League.get_starleague_statistics()
 
 
 class MapStatisticMixin(BaseStatisticMixin):
     def get_statistics(self):
-        return {
-            'melee': Map.get_melee_statistics(
-                Result.melee.all()
-            )
-        }
+        return {}
 
 
 class PlayerSelectMixin(object):
