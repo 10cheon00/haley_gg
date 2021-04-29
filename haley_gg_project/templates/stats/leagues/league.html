@@ -8,32 +8,22 @@
 {% block content %}
 
 {% block page_name %}{% endblock page_name %}
-
-{% for key, data in statistics.results.items %}
-    {{ key }}<br>
-    {% for result in data.values %}
-        {{ result }}<br>
-    {% endfor %}
-    <hr>
-{% endfor %}
-
-{% for key, data in statistics.calculator.items %}
-    {{ key }}<br>
-    {% for result in data.values %}
-        {{ result }}<br>
-    {% endfor %}
-    <hr>
-{% endfor %}
-
-<!-- 3중for문 해결하기. -->
-{% for league, rank_data_classifier in statistics.ranks.items %}
+{% for league, statistics_data in statistics.items %}
     {{ league }}<br>
-    {% for category, rank_data_list in rank_data_classifier.items %}   
-        &lt;&lt; {{ category }} >> <br>
-        {% for rank_data in rank_data_list %}
-            {{ rank_data.player_name }} : {{ rank_data.value }}<br>
-        {% endfor %}
-    {% endfor %}
+    {% for i in statistics_data.race_statistics.values %}
+        {{ i }}
+    {% endfor %}<br>
+
+    {% with result_group_list=statistics_data.matches %}
+        {% include 'stats/results/list.html' %}
+    {% endwith %}<br>
+
+    {% with rank=statistics_data.rank %}
+        {% include 'stats/results/top_players.html' %}
+    {% endwith %}
+    <div class="row">
+       
+    </div>
     <hr>
 {% endfor %}
 

@@ -20,8 +20,8 @@ from haley_gg.apps.stats.utils import PlayerMatchClassifier
 from haley_gg.apps.stats.utils import LeagueMatchClassifier
 from haley_gg.apps.stats.utils import stringify_streak_count
 from haley_gg.apps.stats.statistics import LeagueMeleeRank
-from haley_gg.apps.stats.statistics import PlayerOfRaceStatisticsCalculator
-from haley_gg.apps.stats.statistics import LeagueOfRaceStatisticsCalculator
+from haley_gg.apps.stats.statistics import PlayerRaceStatisticsCalculator
+from haley_gg.apps.stats.statistics import LeagueRaceStatisticsCalculator
 
 
 class Player(models.Model):
@@ -91,7 +91,7 @@ class Player(models.Model):
 
         melee_results = self.results.filter(type='melee')
         win_and_lose_by_race_calculator = \
-            PlayerOfRaceStatisticsCalculator(melee_results)
+            PlayerRaceStatisticsCalculator(melee_results)
 
         streak_count = Result.get_player_streak_count(self.name)
 
@@ -240,21 +240,32 @@ class League(models.Model):
         [x] 리그별로 랭킹을 모두 보여주기
         [ ] 상성값, 랭킹, 전적을 각 리그별로 수집하기
         """
-        context = {}
+        league_match_classifier = LeagueMatchClassifier(Result.proleague.all())
+        league_match_dict = league_match_classifier.classify()
 
-        league_of_match = LeagueMatchClassifier(Result.proleague.all())
-        context['results'] = league_of_match.classify()
+        league_race_statistics_calculator = \
+            LeagueRaceStatisticsCalculator(
+                Result.proleague.get_melee_queryset()
+            )
+        league_race_statistics_dict = \
+            league_race_statistics_calculator.calculate()
 
-        calculator = LeagueOfRaceStatisticsCalculator(
-            Result.proleague.get_melee_queryset()
-        )
-        context['calculator'] = calculator.calculate()
+        league_melee_rank = LeagueMeleeRank(Result.proleague.get_melee_queryset())
+        league_rank_data_dict = league_melee_rank.ranks()
 
-        rank_manager = LeagueMeleeRank(
-            Result.proleague.get_melee_queryset()
-        )
-        context['ranks'] = rank_manager.ranks()
-        return context
+        league_list = League.objects.filter(type='proleague')
+        league_statistics = {}
+
+        for league in league_list:
+            race_statistics = league_race_statistics_dict.get_or_create(league.name)
+            matches = league_match_dict.get_or_create(league.name)
+            rank_data = league_rank_data_dict.get_or_create(league.name)
+            league_statistics[league.name] = {
+                'race_statistics': race_statistics,
+                'matches': matches,
+                'rank': rank_data,
+            }
+        return league_statistics
 
     @classmethod
     def get_starleague_statistics(cls):

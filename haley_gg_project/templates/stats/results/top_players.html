@@ -1,44 +1,11 @@
 <div class="row d-flex text-center">
-    <div class="col-md">
-        다전 순위
-        <hr>
-        {% for player in top_players.result_count %}
-            {{ player.player__name }} : {{ player.result_count }}전<br>
-        {% endfor %}
-    </div>
-    <div class="col-md">
-        승률 순위
-        <hr>
-        {% for player in top_players.win_rate %}
-            {{ player.player__name }} : {{ player.win_rate|floatformat:1 }}%<br>
-        {% endfor %}
-    </div>
-    <div class="col-md">
-        승수 순위
-        <hr>
-        {% for player in top_players.win_count %}
-            {{ player.player__name }} : {{ player.win_count }}승<br>
-        {% endfor %}
-    </div>
-    <div class="col-md">
-        패수 순위
-        <hr>
-        {% for player in top_players.lose_count %}
-            {{ player.player__name }} : {{ player.lose_count }}패<br>
-        {% endfor %}
-    </div>
-    <div class="col-md">
-        연승 순위
-        <hr>
-        {% for data in top_players.win_streak %}
-            {{ data.0 }} : {{ data.1 }}연승 <br/>
-        {% endfor %}
-    </div>
-    <div class="col-md">
-        연패 순위
-        <hr>
-        {% for data in top_players.lose_streak %}
-            {{ data.0 }} : {{ data.1 }}연패 <br/>
-        {% endfor %}
-    </div>
+    {% for category, rank_data_list in rank.items %}
+        <div class="col-md">
+            {{ category }}
+            <hr>
+            {% for rank_data in rank_data_list %}
+                {{ rank_data.player_name }} : {{ rank_data.value }}<br>
+            {% endfor %}
+        </div>
+    {% endfor %}
 </div>

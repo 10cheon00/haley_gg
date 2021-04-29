@@ -50,7 +50,7 @@ class BaseRaceStatisticsCalculator(metaclass=ABCMeta):
         pass
 
 
-class LeagueOfRaceStatisticsCalculator(BaseRaceStatisticsCalculator):
+class LeagueRaceStatisticsCalculator(BaseRaceStatisticsCalculator):
     """
     Calculate win and lose count by each race on melee results.
     """
@@ -60,24 +60,24 @@ class LeagueOfRaceStatisticsCalculator(BaseRaceStatisticsCalculator):
     구조 개선 필요.
     """
 
-    class RaceStatisticsClassifier(BaseDataDict):
+    class RaceStatisticsDict(BaseDataDict):
         data_class = RaceStatistics
 
-        def classify(self, result):
+        def save(self, result):
             race_statistics = self.get_or_create(result.league.name)
             race_statistics.count(result.winner_race, result.loser_race)
 
     def __init__(self, queryset):
         super().__init__(queryset)
-        self.race_statistics_classifier = self.RaceStatisticsClassifier()
+        self.race_statistics_dict = self.RaceStatisticsDict()
 
     def calculate(self):
         for result in self._queryset:
-            self.race_statistics_classifier.classify(result)
-        return self.race_statistics_classifier
+            self.race_statistics_dict.save(result)
+        return self.race_statistics_dict
 
 
-class PlayerOfRaceStatisticsCalculator(BaseRaceStatisticsCalculator):
+class PlayerRaceStatisticsCalculator(BaseRaceStatisticsCalculator):
     def __init__(self, queryset):
         super().__init__(queryset)
         self.player_race = ''
@@ -126,7 +126,7 @@ class RankDataList(list):
         self.append(rank_data)
 
 
-class RankDataClassifier(BaseDataDict):
+class RankDataDict(BaseDataDict):
     data_class = RankDataList
 
     def save(self, rank_data):
@@ -134,12 +134,12 @@ class RankDataClassifier(BaseDataDict):
         rank_data_list.add_data(rank_data)
 
 
-class LeagueRankDataClassifier(BaseDataDict):
-    data_class = RankDataClassifier
+class LeagueRankDataDict(BaseDataDict):
+    data_class = RankDataDict
 
     def save(self, rank_data):
-        rank_data_classifier = self.get_or_create(rank_data.league_name)
-        rank_data_classifier.save(rank_data)
+        rank_data_dict = self.get_or_create(rank_data.league_name)
+        rank_data_dict.save(rank_data)
 
 
 class BaseRankCalculator(metaclass=ABCMeta):
@@ -202,17 +202,16 @@ class MeleeRankCalculator(BaseRankCalculator):
 class LeagueMeleeRank(MeleeRankCalculator):
     def __init__(self, melee_result_queryset):
         super().__init__(melee_result_queryset)
-        self.__league_rank_data_classifier = LeagueRankDataClassifier()
+        self.__league_rank_data_dict = LeagueRankDataDict()
 
     def ranks(self):
         for rank_category in self.rank_category_list:
             self.category_name = rank_category.get_name()
             self.order_queryset_by_category()
             self.convert_ordered_queryset_to_RankData()
-            for rank_data in self.converted_rank_data_list:
-                self.__league_rank_data_classifier.save(rank_data)
+            self.classify_rank_data_list()
 
-        return self.__league_rank_data_classifier
+        return self.__league_rank_data_dict
 
     def order_queryset_by_category(self):
         self.ordered_queryset = self.get_ranked_queryset().order_by(
@@ -230,6 +229,10 @@ class LeagueMeleeRank(MeleeRankCalculator):
                     row.get(self.category_name),
                 )
             )
+
+    def classify_rank_data_list(self):
+        for rank_data in self.converted_rank_data_list:
+            self.__league_rank_data_dict.save(rank_data)
 
 
 class BaseRankCategory(metaclass=ABCMeta):
