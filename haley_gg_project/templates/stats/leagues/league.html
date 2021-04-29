@@ -22,6 +22,19 @@
     {% for result in data.values %}
         {{ result }}<br>
     {% endfor %}
+    <hr>
+{% endfor %}
+
+<!-- 3중for문 해결하기. -->
+{% for league, rank_data_classifier in statistics.ranks.items %}
+    {{ league }}<br>
+    {% for category, rank_data_list in rank_data_classifier.items %}   
+        &lt;&lt; {{ category }} >> <br>
+        {% for rank_data in rank_data_list %}
+            {{ rank_data.player_name }} : {{ rank_data.value }}<br>
+        {% endfor %}
+    {% endfor %}
+    <hr>
 {% endfor %}
 
 {% comment "d" %}

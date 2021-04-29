@@ -16,12 +16,12 @@ from haley_gg.apps.stats.managers import MeleeResultManager
 from haley_gg.apps.stats.managers import ProleagueResultManager
 from haley_gg.apps.stats.utils import remove_space
 from haley_gg.apps.stats.utils import get_player_win_rate
-from haley_gg.apps.stats.utils import ResultGroupManager
-from haley_gg.apps.stats.utils import LeagueResultGroupManager
+from haley_gg.apps.stats.utils import PlayerMatchClassifier
+from haley_gg.apps.stats.utils import LeagueMatchClassifier
 from haley_gg.apps.stats.utils import stringify_streak_count
-# from haley_gg.apps.stats.statistics import MeleeRankManager
-from haley_gg.apps.stats.statistics import PlayerWinAndLoseByRaceCalculator
-from haley_gg.apps.stats.statistics import LeagueWinAndLoseByRaceCalculator
+from haley_gg.apps.stats.statistics import LeagueMeleeRank
+from haley_gg.apps.stats.statistics import PlayerOfRaceStatisticsCalculator
+from haley_gg.apps.stats.statistics import LeagueOfRaceStatisticsCalculator
 
 
 class Player(models.Model):
@@ -72,13 +72,7 @@ class Player(models.Model):
         return reverse('stats:player', kwargs={'name': self.name})
 
     def get_result_group(self):
-        """
-        TODO
-        ResultGroupManager와 get_select_related_on_result의 결합이 필요한지 생각하기.
-        Result.objects.all()에 winner_id와 loser_id를 조회해
-        플레이어가 연관된 전적만 갖고 올 수 없는지?
-        """
-        result_group_list_manager = ResultGroupManager(
+        player_of_match = PlayerMatchClassifier(
             Result.objects.filter(
                 Q(winner_id=self.id) |
                 Q(loser_id=self.id)
@@ -87,7 +81,7 @@ class Player(models.Model):
             )
         )
         return {
-            'result_group_list': result_group_list_manager.groups()
+            'result_group_list': player_of_match.classify()
         }
 
     def get_statistics(self):
@@ -97,7 +91,7 @@ class Player(models.Model):
 
         melee_results = self.results.filter(type='melee')
         win_and_lose_by_race_calculator = \
-            PlayerWinAndLoseByRaceCalculator(melee_results)
+            PlayerOfRaceStatisticsCalculator(melee_results)
 
         streak_count = Result.get_player_streak_count(self.name)
 
@@ -141,12 +135,12 @@ class Player(models.Model):
         results = Result.melee.filter(
             (Q(winner=self.id) & Q(loser=opponent.id)) |
             (Q(winner=opponent.id) & Q(loser=self.id))
-        ).select_related('league', 'map', 'player')
+        ).select_related('league', 'map', 'player', 'winner', 'loser')
 
-        manager = ResultGroupManager(results)
+        player_of_match = PlayerMatchClassifier(results)
 
         context = {
-            'results': manager.groups(),
+            'results': player_of_match.classify(),
             'statistics': results.filter(player=self.id).aggregate(
                 win_count=Sum(
                     Cast('is_win', output_field=models.IntegerField())
@@ -241,30 +235,25 @@ class League(models.Model):
     @classmethod
     def get_proleague_statistics(cls):
         """
-        생각 정리
-         1. 쿼리셋을 나누면 비슷한 쿼리가 생성된다.
-            그래서 DB에 한 번만 요청해야겠다.
-            ResultGroup도 get_absolute_url을 사용하기 때문에
-            딕셔너리는 최종 결과가 되어선 안된다.
-         2. 모든 리그데이터를 나누지 말고 한 번에 연산을 수행 후
-            분류하는게 맞는 것 같다.
-
         [x] 전적을 리그별로 모두 보여주기
         [x] 리그별로 상성값을 모두 보여주기
-        [ ] 리그별로 랭킹을 모두 보여주기
+        [x] 리그별로 랭킹을 모두 보여주기
+        [ ] 상성값, 랭킹, 전적을 각 리그별로 수집하기
         """
         context = {}
 
-        proleague_result_queryset = Result.proleague
-        manager = LeagueResultGroupManager(proleague_result_queryset.all())
-        context['results'] = manager.groups()
+        league_of_match = LeagueMatchClassifier(Result.proleague.all())
+        context['results'] = league_of_match.classify()
 
-        proleague_melee_result_queryset = \
-            proleague_result_queryset.get_melee_queryset()
-        calculator = LeagueWinAndLoseByRaceCalculator(
-            proleague_melee_result_queryset
+        calculator = LeagueOfRaceStatisticsCalculator(
+            Result.proleague.get_melee_queryset()
         )
         context['calculator'] = calculator.calculate()
+
+        rank_manager = LeagueMeleeRank(
+            Result.proleague.get_melee_queryset()
+        )
+        context['ranks'] = rank_manager.ranks()
         return context
 
     @classmethod

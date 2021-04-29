@@ -9,10 +9,10 @@ from django.db.models import IntegerField
 from django.db.models.functions import Cast
 
 from haley_gg.apps.stats.utils import get_deduplicated_result_queryset
-from haley_gg.apps.stats.utils import BaseDataClassifier
+from haley_gg.apps.stats.utils import BaseDataDict
 
 
-class WinAndLoseByRace(dict):
+class RaceStatistics(dict):
     WIN_INDEX = 0
     LOSE_INDEX = 1
 
@@ -34,56 +34,59 @@ class WinAndLoseByRace(dict):
         self[winner_race][loser_race][self.WIN_INDEX] += 1
 
 
-class LeagueWinAndLoseByRaceClassifier(BaseDataClassifier):
-    def __init__(self):
-        self.data_structure = WinAndLoseByRace
-
-
-class BaseWinAndLoseByRaceCalculator(metaclass=ABCMeta):
+class BaseRaceStatisticsCalculator(metaclass=ABCMeta):
     """
     Calculate win and lose count by each race on melee results.
     """
+
+    def __init__(self, queryset):
+        self.deduplicate_queryset(queryset)
+
+    def deduplicate_queryset(self, queryset):
+        self._queryset = get_deduplicated_result_queryset(queryset)
 
     @abstractmethod
     def calculate(self):
         pass
 
-    def set_queryset(self, queryset):
-        self._queryset = get_deduplicated_result_queryset(queryset)
 
-
-class LeagueWinAndLoseByRaceCalculator(
-    LeagueWinAndLoseByRaceClassifier,
-    BaseWinAndLoseByRaceCalculator,
-):
+class LeagueOfRaceStatisticsCalculator(BaseRaceStatisticsCalculator):
     """
     Calculate win and lose count by each race on melee results.
     """
 
+    """
+    TODO
+    구조 개선 필요.
+    """
+
+    class RaceStatisticsClassifier(BaseDataDict):
+        data_class = RaceStatistics
+
+        def classify(self, result):
+            race_statistics = self.get_or_create(result.league.name)
+            race_statistics.count(result.winner_race, result.loser_race)
+
     def __init__(self, queryset):
-        super().__init__()
-        self.set_queryset(queryset)
+        super().__init__(queryset)
+        self.race_statistics_classifier = self.RaceStatisticsClassifier()
 
     def calculate(self):
         for result in self._queryset:
-            league_win_and_lose_by_race = \
-                self.get_or_create(result.league.name)
-            league_win_and_lose_by_race.count(
-                result.winner_race, result.loser_race
-            )
-        return self
+            self.race_statistics_classifier.classify(result)
+        return self.race_statistics_classifier
 
 
-class PlayerWinAndLoseByRaceCalculator(BaseWinAndLoseByRaceCalculator):
+class PlayerOfRaceStatisticsCalculator(BaseRaceStatisticsCalculator):
     def __init__(self, queryset):
-        self.set_queryset(queryset)
+        super().__init__(queryset)
         self.player_race = ''
         self.opponent_race = ''
-        self.__calculated_data = WinAndLoseByRace()
+        self.__calculated_data = RaceStatistics()
 
     def calculate(self):
         """
-        Set result variable to WinAndLoseByRace object.
+        Set result variable to RaceStatistics object.
         Because, this object only count player results.
         So result is not categorize with keys
         such as league name, map name etc.
@@ -110,7 +113,36 @@ class PlayerWinAndLoseByRaceCalculator(BaseWinAndLoseByRaceCalculator):
                 self.opponent_race, self.player_race
 
 
-class BaseRankManager(metaclass=ABCMeta):
+class RankData:
+    def __init__(self, league_name, player_name, category, value):
+        self.league_name = league_name
+        self.player_name = player_name
+        self.category = category
+        self.value = value
+
+
+class RankDataList(list):
+    def add_data(self, rank_data):
+        self.append(rank_data)
+
+
+class RankDataClassifier(BaseDataDict):
+    data_class = RankDataList
+
+    def save(self, rank_data):
+        rank_data_list = self.get_or_create(rank_data.category)
+        rank_data_list.add_data(rank_data)
+
+
+class LeagueRankDataClassifier(BaseDataDict):
+    data_class = RankDataClassifier
+
+    def save(self, rank_data):
+        rank_data_classifier = self.get_or_create(rank_data.league_name)
+        rank_data_classifier.save(rank_data)
+
+
+class BaseRankCalculator(metaclass=ABCMeta):
     """
     Ranks on result queryset with given expressions from RankCategory classes.
     After you inherit this class, you must add RankCategory classes to it.
@@ -118,55 +150,44 @@ class BaseRankManager(metaclass=ABCMeta):
     """
     TODO
     현재 매우 느림. 이유를 파악하자.
+    그리고 클래스가 많고 구조가 많이 복잡하다.
+    동작은 하지만 개선이 필요하다.
     """
 
     def __init__(self, queryset):
         self.queryset = queryset
         self.limit = 5
         self.rank_category_list = []
-        self.ranked_results = {}
 
-    def ranks_on_queryset(self):
-        self.group_queryset_by_league__name_and_player__name()
+    def ranks(self):
+        self.group_queryset_by_league_name_and_player_name()
         self.annotate_on_queryset_with_rank_category_list()
-        self.order_queryset_each_rank_category()
 
-    def group_queryset_by_league__name_and_player__name(self):
+    def group_queryset_by_league_name_and_player_name(self):
         self.queryset = self.queryset.values(
-            'league__name',
-            'player__name'
+            'league__name', 'player__name'
         ).order_by(
-            'league__name',
-            'player__name'
+            'league__name', 'player__name'
         )
 
     def annotate_on_queryset_with_rank_category_list(self):
         for rank_category in self.rank_category_list:
             self.queryset = rank_category.get_annotated_queryset(self.queryset)
 
-    def order_queryset_each_rank_category(self):
-        for rank_category in self.rank_category_list:
-            category = rank_category.get_category_name()
-            self.ranked_results.update({
-                category: self.queryset.order_by(
-                    'league__name',
-                    F(category).desc(),
-                    'player__name'
-                ).values(
-                    'league__name',
-                    'player__name',
-                    category
-                )
-            })
-
     def set_rank_category_list(self, *rank_category_list_args):
         self.rank_category_list = list(rank_category_list_args)
 
-    def get_ranked_results(self):
-        return self.ranked_results
+    def get_ranked_queryset(self):
+        return self.queryset
+
+    def get_rank_category_name_list(self):
+        name_list = []
+        for rank_category in self.rank_category_list:
+            name_list.append(rank_category.get_name())
+        return name_list
 
 
-class MeleeRankManager(BaseRankManager):
+class MeleeRankCalculator(BaseRankCalculator):
     def __init__(self, melee_result_queryset):
         super().__init__(melee_result_queryset)
         self.set_rank_category_list(
@@ -175,24 +196,57 @@ class MeleeRankManager(BaseRankManager):
             ResultCountRankCategory(),
             WinPercentageRankCategory(),
         )
-        self.ranks_on_queryset()
+        super().ranks()
+
+
+class LeagueMeleeRank(MeleeRankCalculator):
+    def __init__(self, melee_result_queryset):
+        super().__init__(melee_result_queryset)
+        self.__league_rank_data_classifier = LeagueRankDataClassifier()
+
+    def ranks(self):
+        for rank_category in self.rank_category_list:
+            self.category_name = rank_category.get_name()
+            self.order_queryset_by_category()
+            self.convert_ordered_queryset_to_RankData()
+            for rank_data in self.converted_rank_data_list:
+                self.__league_rank_data_classifier.save(rank_data)
+
+        return self.__league_rank_data_classifier
+
+    def order_queryset_by_category(self):
+        self.ordered_queryset = self.get_ranked_queryset().order_by(
+            'league__name', F(self.category_name).desc(), 'player__name'
+        )
+
+    def convert_ordered_queryset_to_RankData(self):
+        self.converted_rank_data_list = RankDataList()
+        for row in self.ordered_queryset:
+            self.converted_rank_data_list.add_data(
+                RankData(
+                    row.get('league__name'),
+                    row.get('player__name'),
+                    self.category_name,
+                    row.get(self.category_name),
+                )
+            )
 
 
 class BaseRankCategory(metaclass=ABCMeta):
-    def __init__(self, category_name):
-        self.category_name = category_name
+    def __init__(self, name):
+        self.name = name
 
     @abstractmethod
     def get_annotated_queryset(self, queryset):
         pass
 
-    def get_category_name(self):
-        return self.category_name
+    def get_name(self):
+        return self.name
 
 
 class WinCountRankCategory(BaseRankCategory):
     def __init__(self):
-        super().__init__(category_name='win_count')
+        super().__init__(name='win_count')
 
     def get_annotated_queryset(self, queryset):
         return queryset.annotate(
@@ -204,7 +258,7 @@ class WinCountRankCategory(BaseRankCategory):
 
 class LoseCountRankCategory(BaseRankCategory):
     def __init__(self):
-        super().__init__(category_name='lose_count')
+        super().__init__(name='lose_count')
 
     def get_annotated_queryset(self, queryset):
         return queryset.annotate(
@@ -216,7 +270,7 @@ class LoseCountRankCategory(BaseRankCategory):
 
 class ResultCountRankCategory(BaseRankCategory):
     def __init__(self):
-        super().__init__(category_name='result_count')
+        super().__init__(name='result_count')
 
     def get_annotated_queryset(self, queryset):
         return queryset.annotate(
@@ -226,7 +280,7 @@ class ResultCountRankCategory(BaseRankCategory):
 
 class WinPercentageRankCategory(BaseRankCategory):
     def __init__(self):
-        super().__init__(category_name='win_percentage')
+        super().__init__(name='win_percentage')
 
     def get_annotated_queryset(self, queryset):
         return queryset.annotate(
