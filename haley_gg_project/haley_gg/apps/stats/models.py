@@ -1,6 +1,5 @@
 from django.shortcuts import reverse
 from django.utils import timezone
-from django.utils.text import slugify
 from django.db import models
 from django.db.models import Q
 from django.db.models import F
@@ -14,6 +13,7 @@ from django.db.models.functions import Cast
 
 from haley_gg.apps.stats.managers import MeleeResultManager
 from haley_gg.apps.stats.managers import ProleagueResultManager
+from haley_gg.apps.stats.managers import StarleagueResultManager
 from haley_gg.apps.stats.utils import remove_space
 from haley_gg.apps.stats.utils import get_player_win_rate
 from haley_gg.apps.stats.utils import PlayerMatchClassifier
@@ -22,6 +22,7 @@ from haley_gg.apps.stats.utils import stringify_streak_count
 from haley_gg.apps.stats.statistics import LeagueMeleeRank
 from haley_gg.apps.stats.statistics import PlayerRaceStatisticsCalculator
 from haley_gg.apps.stats.statistics import LeagueRaceStatisticsCalculator
+from haley_gg.apps.stats.statistics import MapRaceStatisticsCalculator
 
 
 class Player(models.Model):
@@ -72,6 +73,11 @@ class Player(models.Model):
         return reverse('stats:player', kwargs={'name': self.name})
 
     def get_result_group(self):
+        """
+        TODO
+        이 플레이어의 전적중에 팀플이 껴있는 경우
+        연결된 다른 result도 갖고 와야한다.
+        """
         player_of_match = PlayerMatchClassifier(
             Result.objects.filter(
                 Q(winner_id=self.id) |
@@ -81,7 +87,7 @@ class Player(models.Model):
             )
         )
         return {
-            'result_group_list': player_of_match.classify()
+            'match_list': player_of_match.classify()
         }
 
     def get_statistics(self):
@@ -98,7 +104,7 @@ class Player(models.Model):
         return {
             'win_rate':
             get_player_win_rate(self.results),
-            'win_and_lose_by_race':
+            'race_statistics':
             win_and_lose_by_race_calculator.calculate(),
             'streak':
             stringify_streak_count(streak_count),
@@ -234,42 +240,47 @@ class League(models.Model):
 
     @classmethod
     def get_proleague_statistics(cls):
-        """
-        [x] 전적을 리그별로 모두 보여주기
-        [x] 리그별로 상성값을 모두 보여주기
-        [x] 리그별로 랭킹을 모두 보여주기
-        [ ] 상성값, 랭킹, 전적을 각 리그별로 수집하기
-        """
-        league_match_classifier = LeagueMatchClassifier(Result.proleague.all())
-        league_match_dict = league_match_classifier.classify()
+        cls.league_list = League.objects.filter(type='proleague').only('name')
+        cls.league_queryset = Result.proleague
 
-        league_race_statistics_calculator = \
+        return cls.get_league_statistics()
+
+    @classmethod
+    def get_starleague_statistics(cls):
+        cls.league_list = League.objects.filter(type='starleague').only('name')
+        cls.league_queryset = Result.starleague
+
+        return cls.get_league_statistics()
+
+    @classmethod
+    def get_league_statistics(cls):
+        match_classifier = LeagueMatchClassifier(cls.league_queryset.all())
+        cls.match_dict = match_classifier.classify()
+
+        race_statistics_calculator = \
             LeagueRaceStatisticsCalculator(
-                Result.proleague.get_melee_queryset()
+                cls.league_queryset.get_melee_queryset()
             )
-        league_race_statistics_dict = \
-            league_race_statistics_calculator.calculate()
+        cls.race_statistics_dict = \
+            race_statistics_calculator.calculate()
 
-        league_melee_rank = LeagueMeleeRank(Result.proleague.get_melee_queryset())
-        league_rank_data_dict = league_melee_rank.ranks()
+        melee_rank = LeagueMeleeRank(cls.league_queryset.get_melee_queryset())
+        cls.rank_data_dict = melee_rank.ranks()
 
-        league_list = League.objects.filter(type='proleague')
         league_statistics = {}
 
-        for league in league_list:
-            race_statistics = league_race_statistics_dict.get_or_create(league.name)
-            matches = league_match_dict.get_or_create(league.name)
-            rank_data = league_rank_data_dict.get_or_create(league.name)
+        for league in cls.league_list:
+            race_statistics = \
+                cls.race_statistics_dict.get_or_create(league.name)
+            matches = cls.match_dict.get_or_create(league.name)
+            rank_data = cls.rank_data_dict.get_or_create(league.name)
+
             league_statistics[league.name] = {
                 'race_statistics': race_statistics,
                 'matches': matches,
                 'rank': rank_data,
             }
         return league_statistics
-
-    @classmethod
-    def get_starleague_statistics(cls):
-        return {}
 
 
 class Map(models.Model):
@@ -294,23 +305,32 @@ class Map(models.Model):
         return self.name
 
     def get_absolute_url(self):
-        return reverse('stats:map', kwargs={'name': self.name})
+        return reverse('stats:map_list')
+
+    def is_teamplay_map(self):
+        return self.type == 'teamplay'
 
     @classmethod
-    def get_melee_statistics(cls, melee_results):
+    def get_statistics(cls):
         """
         TODO
         League.get_melee_statistic 구성때문에 잠시 주석처리.
         개선 필요...
         """
+        race_statistics_calculator = \
+            MapRaceStatisticsCalculator(Result.objects)
+        race_statistics_dict = \
+            race_statistics_calculator.calculate()
 
-        # total_map_of_win_and_lose_by_race_calculator = \
-        #     TotalMapWinAndLoseByRaceCalculator(melee_results)
+        map_statistics = {}
+        for map in Map.objects.all().only('name', 'type'):
+            if map.is_teamplay_map():
+                map_statistics[map.name] = {}
+                continue
 
-        return {
-            # 'total_map_of_win_and_lose_by_race_dict':
-            # total_map_of_win_and_lose_by_race_calculator.get_result()
-        }
+            map_statistics[map.name] = race_statistics_dict.get(map.name)
+
+        return map_statistics
 
 
 class ProleagueTeam(models.Model):
@@ -480,6 +500,7 @@ class Result(models.Model):
     objects = models.Manager()
     melee = MeleeResultManager()
     proleague = ProleagueResultManager()
+    starleague = StarleagueResultManager()
 
     class Meta:
         ordering = [

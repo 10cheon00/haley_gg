@@ -27,37 +27,53 @@ def get_deduplicated_result_queryset(queryset):
     Return values are available for both melee and teamplay statistic manager.
     """
     field_list = [
+        'date',
         'league__name',
         'title',
         'round',
         'winner_race',
         'loser_race'
     ]
-    return queryset.order_by(*field_list).distinct(*field_list)
+    ordering = field_list[:]
+    ordering[0] = '-date'
+
+    return queryset.order_by(*ordering).distinct(*field_list)
 
 
 class Match(list):
     """
     같은 경기 이름을 가진 result들을 모아놓는 자료구조.
     """
+    class PlayerWithRace:
+        def __init__(self, player, race):
+            self.player = player
+            self.race = race
 
     def __init__(self):
-        self.winner = []
-        self.loser = []
+        self.winners = []
+        self.losers = []
 
     def add_result(self, result):
         self.append(result)
-        self.winner.append(result.winner)
-        self.loser.append(result.loser)
+        self.winners.append(
+            self.PlayerWithRace(
+                result.winner, result.winner_race
+            )
+        )
+        self.losers.append(
+            self.PlayerWithRace(
+                result.loser, result.loser_race
+            )
+        )
 
     def get_first_result(self):
         return self[0]
 
     def get_winners(self):
-        return self.winner
+        return self.winners
 
     def get_losers(self):
-        return self.loser
+        return self.losers
 
 
 class BaseDataDict(dict, metaclass=ABCMeta):
@@ -100,8 +116,14 @@ class LeagueMatchDict(BaseDataDict):
 
 
 class LeagueMatchClassifier:
+    """
+    TODO
+    Classifier의 구조가 비슷하다!
+    추상화하자.
+    """
+
     def __init__(self, queryset):
-        self.__result_queryset = queryset
+        self.__result_queryset = get_deduplicated_result_queryset(queryset)
         self.__league_match_dict = LeagueMatchDict()
 
     def classify(self):
@@ -112,7 +134,7 @@ class LeagueMatchClassifier:
 
 class PlayerMatchClassifier:
     def __init__(self, queryset):
-        self.__result_queryset = queryset
+        self.__result_queryset = get_deduplicated_result_queryset(queryset)
         self.__match_dict = MatchDict()
 
     def classify(self):

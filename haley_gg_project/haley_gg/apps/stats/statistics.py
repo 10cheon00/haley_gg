@@ -58,6 +58,7 @@ class LeagueRaceStatisticsCalculator(BaseRaceStatisticsCalculator):
     """
     TODO
     구조 개선 필요.
+    밑의 MapRaceSt~~와 너무 닮았는데 key만 다르다!
     """
 
     class RaceStatisticsDict(BaseDataDict):
@@ -65,6 +66,24 @@ class LeagueRaceStatisticsCalculator(BaseRaceStatisticsCalculator):
 
         def save(self, result):
             race_statistics = self.get_or_create(result.league.name)
+            race_statistics.count(result.winner_race, result.loser_race)
+
+    def __init__(self, queryset):
+        super().__init__(queryset)
+        self.race_statistics_dict = self.RaceStatisticsDict()
+
+    def calculate(self):
+        for result in self._queryset:
+            self.race_statistics_dict.save(result)
+        return self.race_statistics_dict
+
+
+class MapRaceStatisticsCalculator(BaseRaceStatisticsCalculator):
+    class RaceStatisticsDict(BaseDataDict):
+        data_class = RaceStatistics
+
+        def save(self, result):
+            race_statistics = self.get_or_create(result.map.name)
             race_statistics.count(result.winner_race, result.loser_race)
 
     def __init__(self, queryset):

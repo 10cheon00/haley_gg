@@ -4,13 +4,13 @@
 {% block active_map %}active{% endblock active_map %}
 
 {% block content %}
-{% for map, leagues in statistics.melee.total_map_of_win_and_lose_by_race_dict.items %}
+
+{% for map, race_statistics in statistics.items %}
     Map : {{ map }} <br>
-    {% for league, data in leagues.items %}
-        League : {{ league }}<br>
-        {% for key, value in data.items %}
-            {{ key }} : {{ value }}<br>
-        {% endfor %}
+    {% for key, value in race_statistics.items %}
+        {{ key }} : {{ value }}<br>
     {% endfor %}
+    <hr>
 {% endfor %}
+
 {% endblock content %}

@@ -3,24 +3,19 @@ from django.shortcuts import redirect
 from django.shortcuts import reverse
 from django.views.generic import TemplateView
 from django.views.generic import View
-from django.views.generic import ListView
 from django.views.generic import DetailView
 from django.views.generic import UpdateView
 
 from haley_gg.apps.stats.models import Result
-from haley_gg.apps.stats.models import League
-from haley_gg.apps.stats.models import Map
 from haley_gg.apps.stats.models import Player
 from haley_gg.apps.stats.forms import get_pvp_data_formset
 from haley_gg.apps.stats.forms import ResultForm
 from haley_gg.apps.stats.forms import CompareUserForm
 from haley_gg.apps.stats.forms import UpdatePlayerForm
-from haley_gg.apps.stats.forms import UpdateMapForm
 from haley_gg.apps.stats.mixins import ProleagueStatisticMixin
 from haley_gg.apps.stats.mixins import StarleagueStatisticMixin
 from haley_gg.apps.stats.mixins import MapStatisticMixin
 from haley_gg.apps.stats.mixins import PlayerSelectMixin
-from haley_gg.apps.stats.mixins import MapSelectMixin
 
 
 class ResultCreateView(View):
@@ -94,22 +89,6 @@ class StarleagueView(StarleagueStatisticMixin, TemplateView):
 
 class MapView(MapStatisticMixin, TemplateView):
     template_name = 'stats/maps/list.html'
-
-
-class MapDetailView(MapSelectMixin, DetailView):
-    model = Map
-    template_name = 'stats/maps/detail.html'
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context.update(self.object.get_statistics())
-        return context
-
-
-class MapUpdateView(MapSelectMixin, UpdateView):
-    model = Map
-    template_name = 'stats/maps/update.html'
-    form_class = UpdateMapForm
 
 
 class CompareUserView(View):

@@ -1,43 +1,67 @@
 <!--   Rendering with grouped grouped_results.   -->
 <ul class="list-group text-center">
-    {% for result_group in result_group_list.values %}
+    {% for match in match_list.values %}
         <li class="list-group-item">
             <div class="row d-flex justify-content-between align-items-center">
                 <div class="col-md-2">
                     <small class="text-secondary">
-                        {{ result_group.get_first_result.date }}
+                        {{ match.get_first_result.date }}
                     </small>
                 </div>
-                <hr>
+
+                <!--    Basic info    -->
                 <div class="col-md-2">
-                    {{ result_group.get_first_result.league }}
+                    {{ match.get_first_result.league }}
                     <br>
-                    {{ result_group.get_first_result.title }}&nbsp;
-                    {{ result_group.get_first_result.round }}
+                    {{ match.get_first_result.title }}&nbsp;
+                    {{ match.get_first_result.round }}
                 </div>
-                <hr>
-                <div class="col-md-2">
-                    <a href="{{ result_group.get_first_result.map.get_absolute_url }}">
-                        {{ result_group.get_first_result.map }}
+
+                <!--    Map    -->
+                <div class="col-md-1">
+                    <a href="{{ match.get_first_result.map.get_absolute_url }}">
+                        {{ match.get_first_result.map }}
                     </a>
                 </div>
-                <hr>
-                <div class="col-md-4">
-                    {% for result in result_group %}
-                        <a href="{{ result.player.get_absolute_url}}"
+
+                <!--    Players    -->
+                <div class="col-md-2">
+                    {% for player_with_race in match.get_winners %}
+                        <a href="{{ player_with_race.player.get_absolute_url}}"
                            class="
-                            {% if result.player.name == player.name %}
-                                text-secondary
+                            {% if player_with_race.player.name == player.name %}
+                                bg-dark text-white
                             {% endif %}"
                            >
-                            {{ result.player }}&nbsp;{{ result.race }}
-                            {% if result.is_win %}(승){% else %}(패){% endif %}
+                            {{ player_with_race.player }}&nbsp;{{ player_with_race.race }}&nbsp;
                         </a>
                         <br>
                     {% endfor %}
                 </div>
+
+                <div class="col-md-1">
+                    <div class="badge badge-primary align-self-center">W</div>
+                    <small>vs</small>
+                    <div class="badge badge-danger align-self-center">L</div>
+                </div>
+
                 <div class="col-md-2">
-                    {{ result_group.get_first_result.remark }}
+                    {% for player_with_race in match.get_losers %}
+                        <a href="{{ player_with_race.player.get_absolute_url}}"
+                           class="
+                            {% if player_with_race.player.name == player.name %}
+                                bg-dark text-white
+                            {% endif %}"
+                           >
+                            {{ player_with_race.race }}&nbsp;{{ player_with_race.player }}
+                        </a>
+                        <br>
+                    {% endfor %}
+                </div>
+
+                <!--    Remarks    -->
+                <div class="col-md-1">
+                    {{ match.get_first_result.remark }}
                 </div>
             </div>
         </li>

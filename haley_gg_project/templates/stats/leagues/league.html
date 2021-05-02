@@ -8,6 +8,8 @@
 {% block content %}
 
 {% block page_name %}{% endblock page_name %}
+
+{% comment 'example' %}
 {% for league, statistics_data in statistics.items %}
     {{ league }}<br>
     {% for i in statistics_data.race_statistics.values %}
@@ -21,20 +23,17 @@
     {% with rank=statistics_data.rank %}
         {% include 'stats/results/top_players.html' %}
     {% endwith %}
-    <div class="row">
-       
-    </div>
-    <hr>
 {% endfor %}
 
-{% comment "d" %}
+{% endcomment %}
+
 <!--   League Selector   -->
 <ul class="nav nav-pills">
-    {% for league in statistics.melee.keys %}
+    {% for league in statistics.keys %}
         <li class="nav-item">
             <a class="nav-link {% if forloop.counter == 1 %}active{% endif %}" 
                data-toggle="tab"
-               href="#{{ league }}">
+               href="#league-name-{{ league|slugify }}">
                 {{ league|upper }}
             </a>
         </li>
@@ -42,23 +41,25 @@
 </ul>
 <br>
 <!--   League content   -->
-<div>
-</div>
 <div class="tab-content">
-    {% for league, data in statistics.melee.items %}
+    {% for league, data in statistics.items %}
         <div class="tab-pane {% if forloop.counter == 1 %}show active{% endif %}" 
-             id="{{ league }}">
-            <!--   League statistics   -->
+             id="league-name-{{ league|slugify }}">
+            <!--    Race statistics    -->
+            <!--    TODO 
+                    Show this data with chart.js   -->
             <div class="d-flex justify-content-center">
-                {% for win_and_lose_by_race in data.win_and_lose_by_race.values %}
-                    {% for key, data in win_and_lose_by_race.items %}
-                        {{ key }} : {{ data }} <br>
+                {% for race_statistic in data.race_statistics.values %}
+                    {% for key, value in race_statistic.items %}
+                        {{ key }} : {{ value }}
                     {% endfor %}
+                    <br>
                 {% endfor %}
             </div>
-            <br/>
-            {% with top_players=data.top_players %}
-                {% include 'stats/results/top_players.html' %}
+            <!--    Ranks    -->
+            <hr>
+            {% with rank=data.rank %}
+                {% include 'stats/results/ranks.html' %}
             {% endwith %}
             <!--   Results   -->
             <hr>
@@ -66,12 +67,11 @@
                 경기 결과
             </div>
             <hr>
-            {% with result_group_list=data %}
+            {% with match_list=data.matches %}
                 {% include 'stats/results/list.html' %}
             {% endwith %}
         </div>
     {% endfor %}
 </div>
-{% endcomment %}
 
 {% endblock content %}

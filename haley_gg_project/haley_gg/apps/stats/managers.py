@@ -16,8 +16,11 @@ class ProleagueResultManager(models.Manager):
         return self.get_queryset().filter(type='melee')
 
 
-class StarLeagueResultManager(models.Manager):
+class StarleagueResultManager(models.Manager):
     def get_queryset(self):
         return super().get_queryset().select_related(
             'league', 'map', 'player', 'winner', 'loser'
         ).filter(league__type='starleague')
+
+    def get_melee_queryset(self):
+        return self.get_queryset().filter(type='melee')
