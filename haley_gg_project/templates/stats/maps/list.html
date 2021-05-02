@@ -6,7 +6,11 @@
 {% block content %}
 
 {% for map, race_statistics in statistics.items %}
-    Map : {{ map }} <br>
+    Map&nbsp;:&nbsp;
+    <a href="{{ map.get_absolute_url }}">
+        {{ map.name }} 
+    </a>
+    <br>
     {% for key, value in race_statistics.items %}
         {{ key }} : {{ value }}<br>
     {% endfor %}

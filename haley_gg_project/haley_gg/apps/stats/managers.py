@@ -3,7 +3,9 @@ from django.db import models
 
 class MeleeResultManager(models.Manager):
     def get_queryset(self):
-        return super().get_queryset().filter(type__exact='melee')
+        return super().get_queryset().select_related(
+            'league', 'map', 'player', 'winner', 'loser'
+        ).filter(type__exact='melee')
 
 
 class ProleagueResultManager(models.Manager):

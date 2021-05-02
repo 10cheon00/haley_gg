@@ -38,12 +38,20 @@ class StarleagueStatisticMixin(BaseStatisticMixin):
 
 class MapStatisticMixin(BaseStatisticMixin):
     def get_statistics(self):
-        return Map.get_statistics()
+        return Map.get_total_map_statistics()
 
 
 class PlayerSelectMixin(object):
     def get_object(self):
         return get_object_or_404(
             Player,
+            name__iexact=remove_space(self.kwargs['name'])
+        )
+
+
+class MapSelectMixin(object):
+    def get_object(self):
+        return get_object_or_404(
+            Map,
             name__iexact=remove_space(self.kwargs['name'])
         )

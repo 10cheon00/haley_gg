@@ -3,6 +3,7 @@ from django.utils import timezone
 from django.db import models
 from django.db.models import Q
 from django.db.models import F
+from django.db.models import Count
 from django.db.models import Sum
 from django.db.models import Avg
 from django.db.models import Window
@@ -16,6 +17,7 @@ from haley_gg.apps.stats.managers import ProleagueResultManager
 from haley_gg.apps.stats.managers import StarleagueResultManager
 from haley_gg.apps.stats.utils import remove_space
 from haley_gg.apps.stats.utils import get_player_win_rate
+from haley_gg.apps.stats.utils import get_deduplicated_result_queryset
 from haley_gg.apps.stats.utils import PlayerMatchClassifier
 from haley_gg.apps.stats.utils import LeagueMatchClassifier
 from haley_gg.apps.stats.utils import stringify_streak_count
@@ -243,17 +245,17 @@ class League(models.Model):
         cls.league_list = League.objects.filter(type='proleague').only('name')
         cls.league_queryset = Result.proleague
 
-        return cls.get_league_statistics()
+        return cls.get_statistics()
 
     @classmethod
     def get_starleague_statistics(cls):
         cls.league_list = League.objects.filter(type='starleague').only('name')
         cls.league_queryset = Result.starleague
 
-        return cls.get_league_statistics()
+        return cls.get_statistics()
 
     @classmethod
-    def get_league_statistics(cls):
+    def get_statistics(cls):
         match_classifier = LeagueMatchClassifier(cls.league_queryset.all())
         cls.match_dict = match_classifier.classify()
 
@@ -305,32 +307,53 @@ class Map(models.Model):
         return self.name
 
     def get_absolute_url(self):
-        return reverse('stats:map_list')
+        return reverse('stats:map', kwargs={'name': self.name})
+
+    def get_result_count(self):
+        if self.is_teamplay_map():
+            return '팀플맵은 집계하지 않습니다.'
+        return get_deduplicated_result_queryset(self.results).count()
 
     def is_teamplay_map(self):
         return self.type == 'teamplay'
 
     @classmethod
-    def get_statistics(cls):
-        """
-        TODO
-        League.get_melee_statistic 구성때문에 잠시 주석처리.
-        개선 필요...
-        """
+    def get_total_map_statistics(cls):
         race_statistics_calculator = \
-            MapRaceStatisticsCalculator(Result.objects)
+            MapRaceStatisticsCalculator(Result.melee)
         race_statistics_dict = \
             race_statistics_calculator.calculate()
 
         map_statistics = {}
-        for map in Map.objects.all().only('name', 'type'):
+        for map in Map.objects.only('name', 'type'):
             if map.is_teamplay_map():
-                map_statistics[map.name] = {}
+                map_statistics[map] = {}
                 continue
 
-            map_statistics[map.name] = race_statistics_dict.get(map.name)
+            map_statistics[map] = race_statistics_dict.get(map.name)
 
         return map_statistics
+
+    def get_statistics(self):
+        context = {}
+        context['statistics'] = self.get_race_statistics()
+        return context
+
+    def get_race_statistics(self):
+        if self.is_teamplay_map():
+            return {}
+
+        race_statistics_calculator = \
+            LeagueRaceStatisticsCalculator(self.results)
+        race_statistics_dict = \
+            race_statistics_calculator.calculate()
+
+        map_race_statistics = {}
+        for league in League.objects.only('name'):
+            map_race_statistics[league.name] = \
+                race_statistics_dict.get(league.name)
+
+        return map_race_statistics
 
 
 class ProleagueTeam(models.Model):

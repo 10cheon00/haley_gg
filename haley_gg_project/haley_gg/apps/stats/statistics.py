@@ -12,7 +12,7 @@ from haley_gg.apps.stats.utils import get_deduplicated_result_queryset
 from haley_gg.apps.stats.utils import BaseDataDict
 
 
-class RaceStatistics(dict):
+class RaceStatisticsDict(dict):
     WIN_INDEX = 0
     LOSE_INDEX = 1
 
@@ -61,8 +61,8 @@ class LeagueRaceStatisticsCalculator(BaseRaceStatisticsCalculator):
     밑의 MapRaceSt~~와 너무 닮았는데 key만 다르다!
     """
 
-    class RaceStatisticsDict(BaseDataDict):
-        data_class = RaceStatistics
+    class LeagueRaceStatisticsDict(BaseDataDict):
+        data_class = RaceStatisticsDict
 
         def save(self, result):
             race_statistics = self.get_or_create(result.league.name)
@@ -70,7 +70,7 @@ class LeagueRaceStatisticsCalculator(BaseRaceStatisticsCalculator):
 
     def __init__(self, queryset):
         super().__init__(queryset)
-        self.race_statistics_dict = self.RaceStatisticsDict()
+        self.race_statistics_dict = self.LeagueRaceStatisticsDict()
 
     def calculate(self):
         for result in self._queryset:
@@ -79,8 +79,8 @@ class LeagueRaceStatisticsCalculator(BaseRaceStatisticsCalculator):
 
 
 class MapRaceStatisticsCalculator(BaseRaceStatisticsCalculator):
-    class RaceStatisticsDict(BaseDataDict):
-        data_class = RaceStatistics
+    class MapRaceStatisticsDict(BaseDataDict):
+        data_class = RaceStatisticsDict
 
         def save(self, result):
             race_statistics = self.get_or_create(result.map.name)
@@ -88,7 +88,7 @@ class MapRaceStatisticsCalculator(BaseRaceStatisticsCalculator):
 
     def __init__(self, queryset):
         super().__init__(queryset)
-        self.race_statistics_dict = self.RaceStatisticsDict()
+        self.race_statistics_dict = self.MapRaceStatisticsDict()
 
     def calculate(self):
         for result in self._queryset:
@@ -101,7 +101,7 @@ class PlayerRaceStatisticsCalculator(BaseRaceStatisticsCalculator):
         super().__init__(queryset)
         self.player_race = ''
         self.opponent_race = ''
-        self.__calculated_data = RaceStatistics()
+        self.__calculated_data = RaceStatisticsDict()
 
     def calculate(self):
         """

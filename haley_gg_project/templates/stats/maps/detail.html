@@ -1,0 +1,47 @@
+{% extends 'base.html' %}
+{% block title %}{{ object.name }} - 통계{% endblock title %}
+{% block active_map %}active{% endblock active_map %}
+
+{% block content %}
+<div class="jumbotron">
+    <div class="h3">
+        {{ object.name }}
+    </div>
+    <div class="text-secondary">
+        {{ object.get_result_count }}회 플레이.
+    </div>
+</div>
+<ul class="nav nav-pills">
+    {% for league in statistics.keys %}
+        <li class="nav-item">
+            <a class="nav-link {% if forloop.counter == 1 %}active{% endif %}" 
+               data-toggle="tab"
+               href="#league-name-{{ league|slugify }}">
+                {{ league|upper }}
+            </a>
+        </li>
+    {% endfor %}
+</ul>
+<br>
+<!--   League content   -->
+<div class="tab-content">
+    {% for league, data in statistics.items %}
+        <div class="tab-pane {% if forloop.counter == 1 %}show active{% endif %}" 
+             id="league-name-{{ league|slugify }}">
+            <!--    Race statistics    -->
+            <!--    TODO 
+                    Show this data with chart.js   -->
+            <div class="d-flex justify-content-center">
+                {% for race_statistic in data.values %}
+                    {% for key, value in race_statistic.items %}
+                        {{ key }} : {{ value }}
+                    {% endfor %}
+                    <br>
+                {% endfor %}
+            </div>
+            <!--    Ranks    -->
+        </div>
+    {% endfor %}
+</div>
+
+{% endblock content %}
