@@ -3,3 +3,6 @@
 
 # dependency
 django>=3.1.2
+
+# Current state : Locked
+RESTframework를 사용하기 위해 당분간은 
